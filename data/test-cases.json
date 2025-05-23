@@ -1,0 +1,108 @@
+[
+  {
+    "id": "easy-001",
+    "level": "easy",
+    "messages": [
+      {
+        "sender": "MarketBot",
+        "name": "Alert",
+        "title": "Buy Signal",
+        "content": "Strong upward momentum detected",
+        "tickers": ["AAPL", "GOOGL", "MSFT"],
+        "timestamp": "2024-01-15T10:30:00Z"
+      }
+    ],
+    "expectedActions": [
+      {
+        "ticker": "AAPL",
+        "action": "buy",
+        "shares": 100,
+        "quantity": 1,
+        "timing": 5000
+      }
+    ]
+  },
+  {
+    "id": "easy-002",
+    "level": "easy",
+    "messages": [
+      {
+        "sender": "TradingDesk",
+        "name": "Recommendation",
+        "title": "Sell Alert",
+        "content": "Take profits on tech stocks",
+        "tickers": ["TSLA", "NVDA"],
+        "timestamp": "2024-01-15T11:15:00Z"
+      }
+    ],
+    "expectedActions": [
+      {
+        "ticker": "TSLA",
+        "action": "sell",
+        "shares": 50,
+        "quantity": 2,
+        "timing": 8000
+      }
+    ]
+  },
+  {
+    "id": "medium-001",
+    "level": "medium",
+    "messages": [
+      {
+        "sender": "AlgoTrader",
+        "name": "MultiSignal",
+        "title": "Complex Trade",
+        "content": "Buy AAPL, sell MSFT, ignore others",
+        "tickers": ["AAPL", "MSFT", "GOOGL", "AMZN"],
+        "timestamp": "2024-01-15T14:20:00Z"
+      }
+    ],
+    "expectedActions": [
+      {
+        "ticker": "AAPL",
+        "action": "buy",
+        "shares": 200,
+        "quantity": 3,
+        "timing": 6000
+      },
+      {
+        "ticker": "MSFT",
+        "action": "sell",
+        "shares": 150,
+        "quantity": 1,
+        "timing": 6000
+      }
+    ]
+  },
+  {
+    "id": "hard-001",
+    "level": "hard",
+    "messages": [
+      {
+        "sender": "HFT_Bot",
+        "name": "RapidFire",
+        "title": "Speed Test",
+        "content": "Execute quickly: Buy 5x TSLA, Sell 3x NVDA",
+        "tickers": ["TSLA", "NVDA", "AMD", "INTC", "QCOM"],
+        "timestamp": "2024-01-15T16:45:00Z"
+      }
+    ],
+    "expectedActions": [
+      {
+        "ticker": "TSLA",
+        "action": "buy",
+        "shares": 100,
+        "quantity": 5,
+        "timing": 3000
+      },
+      {
+        "ticker": "NVDA",
+        "action": "sell",
+        "shares": 75,
+        "quantity": 3,
+        "timing": 3000
+      }
+    ]
+  }
+]

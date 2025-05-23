@@ -2,11 +2,38 @@
 @tailwind components;
 @tailwind utilities;
 
-html,
-body {
-  @apply bg-white dark:bg-gray-950;
+@layer base {
+  body {
+    font-family: system-ui, sans-serif;
+  }
+}
 
-  @media (prefers-color-scheme: dark) {
-    color-scheme: dark;
+@layer components {
+  .btn-primary {
+    @apply bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition-colors;
+  }
+  
+  .btn-secondary {
+    @apply bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded transition-colors;
+  }
+  
+  .btn-success {
+    @apply bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded transition-colors;
+  }
+  
+  .btn-danger {
+    @apply bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded transition-colors;
+  }
+  
+  .input-field {
+    @apply bg-gray-800 border border-gray-600 rounded px-3 py-2 text-white focus:outline-none focus:border-blue-500;
+  }
+  
+  .ticker-box {
+    @apply w-12 h-12 bg-gray-700 border-2 border-gray-600 rounded flex items-center justify-center cursor-pointer transition-all hover:bg-gray-600;
+  }
+  
+  .ticker-box.selected {
+    @apply bg-blue-600 border-blue-400;
   }
 }

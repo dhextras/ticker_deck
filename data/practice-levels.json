@@ -1,0 +1,26 @@
+[
+  {
+    "level": "easy",
+    "name": "Basic Trading",
+    "description": "Learn fundamental buy and sell operations",
+    "testCases": ["easy-001", "easy-002"],
+    "requiredScore": 70,
+    "timeLimit": 30000
+  },
+  {
+    "level": "medium", 
+    "name": "Multi-Ticker Trading",
+    "description": "Handle multiple tickers and complex scenarios",
+    "testCases": ["medium-001"],
+    "requiredScore": 80,
+    "timeLimit": 20000
+  },
+  {
+    "level": "hard",
+    "name": "Speed Trading",
+    "description": "High-frequency trading simulation",
+    "testCases": ["hard-001"],
+    "requiredScore": 90,
+    "timeLimit": 10000
+  }
+]
