@@ -1,12 +1,12 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
-import { Form, useActionData, useLoaderData } from "@remix-run/react";
+import { Form, useActionData } from "@remix-run/react";
 import { createUserSession, getUserId, verifyLogin } from "~/utils/auth.server";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const userId = await getUserId(request);
   if (userId) return redirect("/dashboard");
-  
+
   return json({});
 }
 
@@ -16,42 +16,39 @@ export async function action({ request }: ActionFunctionArgs) {
   const password = formData.get("password");
 
   if (typeof username !== "string" || typeof password !== "string") {
-    return json(
-      { error: "Invalid form data" },
-      { status: 400 }
-    );
+    return json({ error: "Invalid form data" }, { status: 400 });
   }
 
   const userId = await verifyLogin(username, password);
   if (!userId) {
-    return json(
-      { error: "Invalid credentials" },
-      { status: 401 }
-    );
+    return json({ error: "Invalid credentials" }, { status: 401 });
   }
 
   return createUserSession(userId, "/dashboard");
 }
 
 export default function Login() {
-  console.log("fdas")
+  console.log("fdas");
   const actionData = useActionData<typeof action>();
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-900">
-      <div className="max-w-md w-full space-y-8 p-8">
+    <div className="flex min-h-screen items-center justify-center bg-gray-900">
+      <div className="w-full max-w-md space-y-8 p-8">
         <div>
-          <h1 className="text-3xl font-bold text-center text-white">
+          <h1 className="text-center text-3xl font-bold text-white">
             Trading Simulation
           </h1>
           <p className="mt-2 text-center text-gray-400">
             Sign in to start trading
           </p>
         </div>
-        
+
         <Form method="post" className="mt-8 space-y-6">
           <div>
-            <label htmlFor="username" className="block text-sm font-medium text-gray-300">
+            <label
+              htmlFor="username"
+              className="block text-sm font-medium text-gray-300"
+            >
               Username
             </label>
             <input
@@ -59,13 +56,16 @@ export default function Login() {
               name="username"
               type="text"
               required
-              className="input-field w-full mt-1"
+              className="input-field mt-1 w-full"
               placeholder="Enter username"
             />
           </div>
-          
+
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-300">
+            <label
+              htmlFor="password"
+              className="block text-sm font-medium text-gray-300"
+            >
               Password
             </label>
             <input
@@ -73,13 +73,13 @@ export default function Login() {
               name="password"
               type="password"
               required
-              className="input-field w-full mt-1"
+              className="input-field mt-1 w-full"
               placeholder="Enter password"
             />
           </div>
 
           {actionData?.error && (
-            <div className="bg-red-600 text-white p-3 rounded">
+            <div className="rounded bg-red-600 p-3 text-white">
               {actionData.error}
             </div>
           )}
@@ -88,15 +88,27 @@ export default function Login() {
             Sign In
           </button>
         </Form>
-        
-        <div className="mt-6 p-4 bg-gray-800 rounded-lg">
-          <h3 className="text-sm font-medium text-gray-300 mb-2">Hotkeys Guide:</h3>
-          <ul className="text-xs text-gray-400 space-y-1">
-            <li><code>B</code> - Buy (press multiple times for quantity)</li>
-            <li><code>S</code> - Sell (press multiple times for quantity)</li>
-            <li><code>1-9</code> - Switch tickers</li>
-            <li><code>C + [number] + Enter</code> - Change share amount</li>
-            <li><code>Backspace</code> - Close popup</li>
+
+        <div className="mt-6 rounded-lg bg-gray-800 p-4">
+          <h3 className="mb-2 text-sm font-medium text-gray-300">
+            Hotkeys Guide:
+          </h3>
+          <ul className="space-y-1 text-xs text-gray-400">
+            <li>
+              <code>B</code> - Buy (press multiple times for quantity)
+            </li>
+            <li>
+              <code>S</code> - Sell (press multiple times for quantity)
+            </li>
+            <li>
+              <code>1-9</code> - Switch tickers
+            </li>
+            <li>
+              <code>C + [number] + Enter</code> - Change share amount
+            </li>
+            <li>
+              <code>Backspace</code> - Close popup
+            </li>
           </ul>
         </div>
       </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 
 interface ShareAmountInputProps {
   value: number;
@@ -7,11 +7,11 @@ interface ShareAmountInputProps {
   hotkeyBuffer: string;
 }
 
-export default function ShareAmountInput({ 
-  value, 
-  onChange, 
-  isChangingViaHotkey, 
-  hotkeyBuffer 
+export default function ShareAmountInput({
+  value,
+  onChange,
+  isChangingViaHotkey,
+  hotkeyBuffer,
 }: ShareAmountInputProps) {
   const [inputValue, setInputValue] = useState(value.toString());
 
@@ -22,7 +22,7 @@ export default function ShareAmountInput({
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
     setInputValue(newValue);
-    
+
     const numValue = parseInt(newValue);
     if (!isNaN(numValue) && numValue > 0) {
       onChange(numValue);
@@ -35,11 +35,9 @@ export default function ShareAmountInput({
   };
 
   return (
-    <div className="bg-gray-800 p-4 rounded-lg">
-      <label className="block text-sm font-medium mb-2">
-        Share Amount
-      </label>
-      
+    <div className="rounded-lg bg-gray-800 p-4">
+      <label className="mb-2 block text-sm font-medium">Share Amount</label>
+
       <div className="flex items-center space-x-3">
         <input
           type="number"
@@ -50,20 +48,18 @@ export default function ShareAmountInput({
           min="1"
           placeholder="100"
         />
-        
+
         <div className="text-sm text-gray-400">
           {isChangingViaHotkey ? (
             <span className="text-yellow-400">
               Changing via hotkey: C + {hotkeyBuffer} + Enter
             </span>
           ) : (
-            <span>
-              Use: C + [number] + Enter for quick change
-            </span>
+            <span>Use: C + [number] + Enter for quick change</span>
           )}
         </div>
       </div>
-      
+
       <div className="mt-2 text-xs text-gray-500">
         Current amount will be used for each buy/sell action
       </div>

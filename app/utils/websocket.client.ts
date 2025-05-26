@@ -1,5 +1,5 @@
 import { io, Socket } from "socket.io-client";
-import type { TradingMessage, TradingAction } from "~/types";
+import type { TradingAction, TradingMessage } from "~/types";
 
 let socket: Socket | null = null;
 
@@ -7,27 +7,27 @@ export function initSocket(token: string): Socket {
   if (socket) {
     socket.disconnect();
   }
-   console.log(token)
-  
+  console.log(token);
+
   socket = io("http://localhost:3001", {
     auth: {
       token,
     },
     transports: ["websocket"],
   });
-  
+
   socket.on("connect", () => {
     console.log("Connected to server");
   });
-  
+
   socket.on("disconnect", () => {
     console.log("Disconnected from server");
   });
-  
+
   socket.on("connect_error", (error) => {
     console.error("Connection error:", error);
   });
-  
+
   return socket;
 }
 

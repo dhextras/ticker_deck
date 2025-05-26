@@ -45,32 +45,37 @@ export async function getTradingLogs(
   startDate?: string,
   endDate?: string,
   ticker?: string,
-  action?: "buy" | "sell"
+  action?: "buy" | "sell",
 ): Promise<TradingLog[]> {
   try {
     let logs = await loadTradingLogs();
-    
+
     if (userId) {
-      logs = logs.filter(log => log.userId === userId);
+      logs = logs.filter((log) => log.userId === userId);
     }
-    
+
     if (startDate) {
-      logs = logs.filter(log => log.timestamp >= startDate);
+      logs = logs.filter((log) => log.timestamp >= startDate);
     }
-    
+
     if (endDate) {
-      logs = logs.filter(log => log.timestamp <= endDate);
+      logs = logs.filter((log) => log.timestamp <= endDate);
     }
-    
+
     if (ticker) {
-      logs = logs.filter(log => log.ticker.toLowerCase() === ticker.toLowerCase());
+      logs = logs.filter(
+        (log) => log.ticker.toLowerCase() === ticker.toLowerCase(),
+      );
     }
-    
+
     if (action) {
-      logs = logs.filter(log => log.action === action);
+      logs = logs.filter((log) => log.action === action);
     }
-    
-    return logs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+    return logs.sort(
+      (a, b) =>
+        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+    );
   } catch (error) {
     console.error("Error getting trading logs:", error);
     return [];

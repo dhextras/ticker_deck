@@ -1,6 +1,6 @@
+import dotenv from "dotenv";
 import { createServer } from "http";
 import { Server as SocketIOServer } from "socket.io";
-import dotenv from "dotenv";
 import { setupWebSocket } from "./websocket.server";
 
 dotenv.config();

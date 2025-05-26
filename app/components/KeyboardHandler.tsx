@@ -23,7 +23,7 @@ export default function KeyboardHandler({
   onStateChange,
 }: KeyboardHandlerProps) {
   const stateRef = useRef(hotkeyState);
-  
+
   useEffect(() => {
     stateRef.current = hotkeyState;
   }, [hotkeyState]);
@@ -31,13 +31,19 @@ export default function KeyboardHandler({
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Don't handle if focused on input fields
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement
+      ) {
         return;
       }
 
       // Prevent default for our hotkeys
       const key = e.key.toLowerCase();
-      if (['b', 's', 'c', 'enter', 'backspace'].includes(key) || /\d/.test(key)) {
+      if (
+        ["b", "s", "c", "enter", "backspace"].includes(key) ||
+        /\d/.test(key)
+      ) {
         e.preventDefault();
       }
 
@@ -49,7 +55,7 @@ export default function KeyboardHandler({
         onSell,
         onTickerChange,
         onShareChange,
-        onDisableTemporary
+        onDisableTemporary,
       );
 
       if (newState !== stateRef.current) {

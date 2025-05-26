@@ -10,7 +10,7 @@ export interface TradingMessage {
 export interface TradingLog {
   timestamp: string;
   userId: string;
-  action: 'buy' | 'sell';
+  action: "buy" | "sell";
   ticker: string;
   shares: number;
   quantity: number;
@@ -20,21 +20,21 @@ export interface TradingLog {
 
 export interface TestCase {
   id: string;
-  level: 'easy' | 'medium' | 'hard';
+  level: "easy" | "medium" | "hard";
   messages: TradingMessage[];
   expectedActions: ExpectedAction[];
 }
 
 export interface ExpectedAction {
   ticker: string;
-  action: 'buy' | 'sell' | 'ignore';
+  action: "buy" | "sell" | "ignore";
   shares: number;
   quantity: number;
   timing?: number;
 }
 
 export interface TradingAction {
-  action: 'buy' | 'sell';
+  action: "buy" | "sell";
   ticker: string;
   shares: number;
   quantity: number;
@@ -46,7 +46,7 @@ export interface NotificationData {
   title: string;
   message: string;
   timestamp: string;
-  type: 'info' | 'success' | 'warning' | 'error';
+  type: "info" | "success" | "warning" | "error";
 }
 
 export interface User {

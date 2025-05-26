@@ -8,7 +8,7 @@
     "timeLimit": 30000
   },
   {
-    "level": "medium", 
+    "level": "medium",
     "name": "Multi-Ticker Trading",
     "description": "Handle multiple tickers and complex scenarios",
     "testCases": ["medium-001"],

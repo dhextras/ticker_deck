@@ -1,37 +1,42 @@
 import { Server as SocketIOServer } from "socket.io";
+import type { TradingAction, TradingMessage } from "../app/types";
 import { verifyToken } from "../app/utils/auth.server";
 import { logTradingAction } from "./logger";
-import type { TradingAction, TradingMessage } from "../app/types";
 
 export function setupWebSocket(io: SocketIOServer) {
   // Authentication middleware
   io.use((socket, next) => {
     const token = socket.handshake.auth.token;
-    
+
     if (!token) {
       return next(new Error("Authentication required"));
     }
-    
+
     const userId = verifyToken(token);
-    
+
     if (!userId) {
       return next(new Error("Invalid token"));
     }
-    
+
     socket.data.userId = userId;
     next();
   });
 
   io.on("connection", (socket) => {
     console.log(`User ${socket.data.userId} connected`);
-    
+
     // Handle trading actions
     socket.on("trading_action", async (action: TradingAction) => {
       try {
         console.log(`Trading action from ${socket.data.userId}:`, action);
-        
+
         // Validate action
-        if (!action.action || !action.ticker || !action.shares || !action.quantity) {
+        if (
+          !action.action ||
+          !action.ticker ||
+          !action.shares ||
+          !action.quantity
+        ) {
           socket.emit("trading_response", {
             success: false,
             message: "Invalid trading action",
@@ -39,7 +44,7 @@ export function setupWebSocket(io: SocketIOServer) {
           });
           return;
         }
-        
+
         // Process multiple orders (quantity support)
         const responses = [];
         for (let i = 0; i < action.quantity; i++) {
@@ -53,7 +58,7 @@ export function setupWebSocket(io: SocketIOServer) {
             quantity: 1, // Each log entry is for 1 execution
             success: true,
           });
-          
+
           responses.push({
             orderNumber: i + 1,
             action: action.action,
@@ -61,7 +66,7 @@ export function setupWebSocket(io: SocketIOServer) {
             shares: action.shares,
           });
         }
-        
+
         // Send confirmation back
         socket.emit("trading_response", {
           success: true,
@@ -73,10 +78,9 @@ export function setupWebSocket(io: SocketIOServer) {
           timestamp: new Date().toISOString(),
           orders: responses,
         });
-        
       } catch (error) {
         console.error("Error processing trading action:", error);
-        
+
         // Log failed action
         await logTradingAction({
           timestamp: new Date().toISOString(),
@@ -88,7 +92,7 @@ export function setupWebSocket(io: SocketIOServer) {
           success: false,
           error: error instanceof Error ? error.message : "Unknown error",
         });
-        
+
         socket.emit("trading_response", {
           success: false,
           message: "Trading action failed",
@@ -100,8 +104,11 @@ export function setupWebSocket(io: SocketIOServer) {
     // Handle incoming trading messages (simulated market messages)
     socket.on("send_trading_message", (message: TradingMessage) => {
       try {
-        console.log(`Broadcasting message from ${socket.data.userId}:`, message);
-        
+        console.log(
+          `Broadcasting message from ${socket.data.userId}:`,
+          message,
+        );
+
         // Validate message structure
         if (!message.sender || !message.name || !message.tickers?.length) {
           socket.emit("message_error", {
@@ -110,16 +117,16 @@ export function setupWebSocket(io: SocketIOServer) {
           });
           return;
         }
-        
+
         // Check if message should be sent (title or content present)
         const hasTitle = message.title && message.title.trim() !== "";
         const hasContent = message.content && message.content.trim() !== "";
-        
+
         if (!hasTitle && !hasContent) {
           console.log("Message not sent - no title or content");
           return;
         }
-        
+
         // Format message for display
         let displayMessage = "";
         if (hasTitle && hasContent) {
@@ -129,21 +136,20 @@ export function setupWebSocket(io: SocketIOServer) {
         } else if (hasContent) {
           displayMessage = `content: ${message.content}`;
         }
-        
+
         // Add timestamp if not present
         const messageWithTimestamp: TradingMessage = {
           ...message,
           timestamp: message.timestamp || new Date().toISOString(),
         };
-        
+
         // Broadcast to all connected clients
         io.emit("trading_message", {
           ...messageWithTimestamp,
           displayMessage,
         });
-        
+
         console.log(`Message broadcasted: ${displayMessage}`);
-        
       } catch (error) {
         console.error("Error processing trading message:", error);
         socket.emit("message_error", {

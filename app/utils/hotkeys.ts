@@ -26,7 +26,7 @@ export function handleKeyPress(
   onSell: (quantity: number) => void,
   onTickerChange: (ticker: number) => void,
   onShareChange: (shares: number) => void,
-  onDisableTemporary: () => void
+  onDisableTemporary: () => void,
 ): HotkeyState {
   if (state.disabled) {
     return state;
@@ -38,7 +38,7 @@ export function handleKeyPress(
     case "b":
       newState.buyCount++;
       newState.sellCount = 0; // Reset sell count
-      
+
       // Debounce buy actions - wait a bit to see if more 'b' presses come
       setTimeout(() => {
         if (newState.buyCount > 0) {
@@ -51,7 +51,7 @@ export function handleKeyPress(
     case "s":
       newState.sellCount++;
       newState.buyCount = 0; // Reset buy count
-      
+
       // Debounce sell actions
       setTimeout(() => {
         if (newState.sellCount > 0) {
@@ -99,14 +99,17 @@ export function handleKeyPress(
         } else {
           // Handle ticker selection
           newState.numberBuffer += key;
-          
+
           // Try to select ticker immediately for single digit
           const tickerNum = parseInt(newState.numberBuffer);
           if (tickerNum <= totalTickers) {
             onTickerChange(tickerNum);
-            
+
             // If single digit or if we've reached max possible ticker, clear buffer
-            if (newState.numberBuffer.length === 1 || tickerNum === totalTickers) {
+            if (
+              newState.numberBuffer.length === 1 ||
+              tickerNum === totalTickers
+            ) {
               newState.numberBuffer = "";
             }
           } else {
@@ -117,13 +120,13 @@ export function handleKeyPress(
             }
             newState.numberBuffer = "";
           }
-          
+
           // Clear number buffer after short delay
           setTimeout(() => {
             newState.numberBuffer = "";
           }, 1000);
         }
-        
+
         newState.buyCount = 0;
         newState.sellCount = 0;
       }

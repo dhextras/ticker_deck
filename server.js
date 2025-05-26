@@ -1,7 +1,7 @@
-import http from "http";
+import { createRequestHandler } from "@remix-run/express";
 import dotenv from "dotenv";
 import express from "express";
-import { createRequestHandler } from "@remix-run/express";
+import http from "http";
 
 dotenv.config();
 const app = express();
@@ -14,11 +14,11 @@ const viteDevServer =
     : await import("vite").then((vite) =>
         vite.createServer({
           server: { middlewareMode: true },
-        })
+        }),
       );
 
 app.use(
-  viteDevServer ? viteDevServer.middlewares : express.static("build/client")
+  viteDevServer ? viteDevServer.middlewares : express.static("build/client"),
 );
 
 const build = viteDevServer
@@ -27,6 +27,6 @@ const build = viteDevServer
 
 app.all("*", createRequestHandler({ build }));
 
-server.listen(process.env.FRONTEND_PORT ||3000, () => {
+server.listen(process.env.FRONTEND_PORT || 3000, () => {
   console.log("App listening on http://localhost:3000");
 });
