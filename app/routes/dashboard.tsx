@@ -14,11 +14,27 @@ import KeyboardHandler from "~/components/KeyboardHandler";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const userId = await requireUserId(request);
-  
-  // Get token from session for WebSocket auth
-  const url = new URL(request.url);
-  const token = request.headers.get("cookie")?.match(/_session=([^;]+)/)?.[1] || "";
-  
+
+  function getTokenFromCookie(
+    cookieString: string | null | undefined,
+    tokenName: string,
+  ): string {
+    if (!cookieString) return "";
+
+    const cookies: Record<string, string> = cookieString.split("; ").reduce(
+      (acc, cookie) => {
+        const [name, ...rest] = cookie.split("=");
+        acc[name] = rest.join("=");
+        return acc;
+      },
+      {} as Record<string, string>,
+    );
+
+    return cookies[tokenName] || "";
+  }
+
+  const cookieHeader = request.headers.get("cookie");
+  const token = getTokenFromCookie(cookieHeader, "ticker_deck_session");
   return json({ userId, token });
 }
 

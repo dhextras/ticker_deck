@@ -18,7 +18,7 @@ if (!process.env.USERNAME || !process.env.PASSWORD) {
 
 const sessionStorage = createCookieSessionStorage({
   cookie: {
-    name: "__session",
+    name: "ticker_deck__session",
     httpOnly: true,
     maxAge: 60 * 60 * 24 * 7, // 7 days
     path: "/",
