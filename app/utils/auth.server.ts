@@ -18,7 +18,7 @@ if (!process.env.USERNAME || !process.env.PASSWORD) {
 
 const sessionStorage = createCookieSessionStorage({
   cookie: {
-    name: "ticker_deck__session",
+    name: "ticker_deck_session",
     httpOnly: true,
     maxAge: 60 * 60 * 24 * 7, // 7 days
     path: "/",
@@ -30,7 +30,9 @@ const sessionStorage = createCookieSessionStorage({
 
 export async function createUserSession(userId: string, redirectTo: string) {
   const session = await sessionStorage.getSession();
-  const token = jwt.sign({ userId }, process.env.JWT_SECRET!, { expiresIn: "7d" });
+  const token = jwt.sign({ userId }, process.env.JWT_SECRET!, {
+    expiresIn: "7d",
+  });
 
   session.set("token", token);
   session.set("userId", userId);
@@ -43,7 +45,9 @@ export async function createUserSession(userId: string, redirectTo: string) {
 }
 
 export async function getUserSession(request: Request) {
-  const session = await sessionStorage.getSession(request.headers.get("Cookie"));
+  const session = await sessionStorage.getSession(
+    request.headers.get("Cookie"),
+  );
   return session;
 }
 
@@ -54,7 +58,9 @@ export async function getUserId(request: Request): Promise<string | null> {
   if (!token) return null;
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { userId: string };
+    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as {
+      userId: string;
+    };
     return decoded.userId;
   } catch {
     return null;
@@ -80,36 +86,41 @@ export async function logout(request: Request) {
   });
 }
 
-export async function verifyLogin(username: string, password: string): Promise<string | null> {
+export async function verifyLogin(
+  username: string,
+  password: string,
+): Promise<string | null> {
   const envUsername = process.env.USERNAME!;
   const envPassword = process.env.PASSWORD!;
-  
+
   if (username !== envUsername) {
     return null;
   }
-  
+
   // FIXME: For simplicity, we'll compare plain text passwords
   // In production, you'd hash the password in .env and compare hashes
   if (password !== envPassword) {
     return null;
   }
-  
+
   return "user_1";
 }
 
 export function verifyToken(token: string): string | null {
   try {
+    const urlDecoded = decodeURIComponent(token);
 
-  const urlDecoded = decodeURIComponent(token);
+    const [wrappedBase64, _] = urlDecoded.split(".");
 
-const [wrappedBase64, _] = urlDecoded.split(".");
+    const payload = JSON.parse(
+      Buffer.from(wrappedBase64, "base64").toString("utf8"),
+    );
 
-const payload = JSON.parse(Buffer.from(wrappedBase64, "base64").toString("utf8"));
+    const actualJWT = payload.token;
 
-const actualJWT = payload.token;
-
-
-    const decoded = jwt.verify(actualJWT, process.env.JWT_SECRET!) as { userId: string };
+    const decoded = jwt.verify(actualJWT, process.env.JWT_SECRET!) as {
+      userId: string;
+    };
     return decoded.userId;
   } catch {
     return null;

@@ -34,7 +34,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
   }
 
   const cookieHeader = request.headers.get("cookie");
-  const token = getTokenFromCookie(cookieHeader, "ticker_deck_session");
+  const token = getTokenFromCookie(cookieHeader, "ticker_deck__session");
   return json({ userId, token });
 }
 
