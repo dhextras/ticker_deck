@@ -1,569 +1,829 @@
-import type { LoaderFunctionArgs } from "@remix-run/node";
+import type { LoaderFunctionArgs, ActionFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
-import { Link, useLoaderData } from "@remix-run/react";
-import { useCallback, useEffect, useState } from "react";
-import type { NotificationData, TestCase, TradingAction } from "~/types";
+import { useLoaderData, Link, useFetcher } from "@remix-run/react";
+import { useState, useCallback } from "react";
 import { requireUserId } from "~/utils/auth.server";
+import type { TradingMessage, TradingAction } from "~/types";
 import { createInitialHotkeyState, type HotkeyState } from "~/utils/hotkeys";
+import { join } from "path";
+import { existsSync, readFileSync, writeFileSync } from "fs";
 
-import KeyboardHandler from "~/components/KeyboardHandler";
+import TradingPopup from "~/components/TradingPopup";
 import NotificationPopup from "~/components/NotificationPopup";
-import ShareAmountInput from "~/components/ShareAmountInput";
-import TickerSelector from "~/components/TickerSelector";
+import KeyboardHandler from "~/components/KeyboardHandler";
 
-// Sample test cases
-const sampleTestCases: TestCase[] = [
-  {
-    id: "easy_1",
-    level: "easy",
-    messages: [
-      {
-        sender: "TraderBot",
-        name: "Signal Alert",
-        title: "Buy Signal",
-        content: "Strong uptrend detected",
-        tickers: ["AAPL", "GOOGL", "MSFT"],
-      },
-    ],
-    expectedActions: [
-      {
-        ticker: "AAPL",
-        action: "buy",
-        shares: 100,
-        quantity: 1,
-        timing: 10000,
-      },
-    ],
-  },
-  {
-    id: "medium_1",
-    level: "medium",
-    messages: [
-      {
-        sender: "MarketAnalyst",
-        name: "Multi-Ticker Alert",
-        title: "Divergence Pattern",
-        content: "Buy AAPL, Sell GOOGL",
-        tickers: ["AAPL", "GOOGL", "MSFT", "TSLA"],
-      },
-    ],
-    expectedActions: [
-      {
-        ticker: "AAPL",
-        action: "buy",
-        shares: 100,
-        quantity: 1,
-        timing: 15000,
-      },
-      {
-        ticker: "GOOGL",
-        action: "sell",
-        shares: 100,
-        quantity: 1,
-        timing: 15000,
-      },
-    ],
-  },
-  {
-    id: "hard_1",
-    level: "hard",
-    messages: [
-      {
-        sender: "AlgoTrader",
-        name: "Complex Strategy",
-        title: "Multi-Action Required",
-        content: "Buy 3x AAPL, Sell 2x GOOGL, ignore others",
-        tickers: ["AAPL", "GOOGL", "MSFT", "TSLA", "NVDA"],
-      },
-    ],
-    expectedActions: [
-      {
-        ticker: "AAPL",
-        action: "buy",
-        shares: 100,
-        quantity: 3,
-        timing: 20000,
-      },
-      {
-        ticker: "GOOGL",
-        action: "sell",
-        shares: 100,
-        quantity: 2,
-        timing: 20000,
-      },
-    ],
-  },
-];
+interface PracticeLevel {
+  level: "easy" | "medium" | "hard";
+  name: string;
+  description: string;
+  testCases: string[];
+  requiredScore: number;
+  timeLimit: number;
+}
+
+interface TestCase {
+  id: string;
+  level: "easy" | "medium" | "hard";
+  messages: TradingMessage[];
+  expectedActions: {
+    ticker: string;
+    action: "buy" | "sell";
+    shares: number;
+    quantity: number;
+    timing: number;
+  }[];
+}
+
+// Updated interface to store all attempts
+interface LeaderboardEntry {
+  userId: string;
+  level: "easy" | "medium" | "hard";
+  attempts: Array<{
+    time: number;
+    score: number;
+    timestamp: string;
+  }>;
+  bestTime: number;
+  bestScore: number;
+  testCount: number;
+  averageScore: number;
+  lastUpdated: string;
+}
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const userId = await requireUserId(request);
-  return json({ userId, testCases: sampleTestCases });
+  const levelsPath = join(process.cwd(), "data", "practice-levels.json");
+  let practiceLevels: PracticeLevel[] = [];
+
+  if (existsSync(levelsPath)) {
+    try {
+      const fileContent = readFileSync(levelsPath, "utf-8");
+      practiceLevels = JSON.parse(fileContent);
+    } catch (error) {
+      console.error("Error reading practice levels:", error);
+    }
+  }
+
+  const testCasesPath = join(process.cwd(), "data", "test-cases.json");
+  let testCases: TestCase[] = [];
+
+  if (existsSync(testCasesPath)) {
+    try {
+      const fileContent = readFileSync(testCasesPath, "utf-8");
+      testCases = JSON.parse(fileContent);
+    } catch (error) {
+      console.error("Error reading test cases:", error);
+    }
+  }
+
+  const leaderboardPath = join(
+    process.cwd(),
+    "data",
+    "practice-leaderboard.json",
+  );
+  let leaderboard: LeaderboardEntry[] = [];
+
+  if (existsSync(leaderboardPath)) {
+    try {
+      const fileContent = readFileSync(leaderboardPath, "utf-8");
+      leaderboard = JSON.parse(fileContent);
+    } catch (error) {
+      console.error("Error reading leaderboard:", error);
+    }
+  }
+
+  return json({
+    userId,
+    practiceLevels,
+    testCases,
+    leaderboard,
+  });
+}
+
+export async function action({ request }: ActionFunctionArgs) {
+  if (request.method !== "POST") {
+    return json({ error: "Method not allowed" }, { status: 405 });
+  }
+
+  try {
+    const data = await request.json();
+    const { userId, level, bestTime, bestScore, testCount, averageScore } =
+      data;
+
+    if (
+      !userId ||
+      !level ||
+      typeof bestTime !== "number" ||
+      typeof bestScore !== "number"
+    ) {
+      return json({ error: "Missing required fields" }, { status: 400 });
+    }
+
+    const leaderboardPath = join(
+      process.cwd(),
+      "data",
+      "practice-leaderboard.json",
+    );
+    let leaderboard: LeaderboardEntry[] = [];
+
+    if (existsSync(leaderboardPath)) {
+      try {
+        const fileContent = readFileSync(leaderboardPath, "utf-8");
+        leaderboard = JSON.parse(fileContent);
+      } catch (error) {
+        console.error("Error reading leaderboard:", error);
+      }
+    }
+
+    const existingEntryIndex = leaderboard.findIndex(
+      (entry) => entry.userId === userId && entry.level === level,
+    );
+
+    const newAttempt = {
+      time: bestTime,
+      score: bestScore,
+      timestamp: new Date().toISOString(),
+    };
+
+    if (existingEntryIndex >= 0) {
+      const existing = leaderboard[existingEntryIndex];
+      existing.attempts.push(newAttempt);
+
+      // Keep only the last 30 attempts to prevent unlimited growth
+      if (existing.attempts.length > 30) {
+        existing.attempts = existing.attempts.slice(-30);
+      }
+
+      existing.bestTime = Math.min(existing.bestTime, bestTime);
+      existing.bestScore = Math.max(existing.bestScore, bestScore);
+      existing.testCount = existing.testCount + testCount;
+      existing.averageScore = averageScore;
+      existing.lastUpdated = new Date().toISOString();
+    } else {
+      const newEntry: LeaderboardEntry = {
+        userId,
+        level,
+        attempts: [newAttempt],
+        bestTime,
+        bestScore,
+        testCount,
+        averageScore,
+        lastUpdated: new Date().toISOString(),
+      };
+      leaderboard.push(newEntry);
+    }
+
+    writeFileSync(leaderboardPath, JSON.stringify(leaderboard, null, 2));
+    return json({ success: true });
+  } catch (error) {
+    console.error("Error updating leaderboard:", error);
+    return json({ error: "Internal server error" }, { status: 500 });
+  }
 }
 
 export default function Practice() {
-  const { userId, testCases } = useLoaderData<typeof loader>();
+  const { userId, practiceLevels, testCases, leaderboard } =
+    useLoaderData<typeof loader>();
+  const fetcher = useFetcher();
 
-  // State management
   const [selectedLevel, setSelectedLevel] = useState<
     "easy" | "medium" | "hard"
   >("easy");
-  const [currentTest, setCurrentTest] = useState<TestCase | null>(null);
+  const [selectedTestCount, setSelectedTestCount] = useState(1);
   const [isTestActive, setIsTestActive] = useState(false);
-  const [userActions, setUserActions] = useState<TradingAction[]>([]);
-  const [startTime, setStartTime] = useState<number>(0);
-  const [timeRemaining, setTimeRemaining] = useState<number>(0);
-  const [score, setScore] = useState<number>(0);
-  const [testResults, setTestResults] = useState<any>(null);
-
-  // Trading state
-  const [currentTickers, setCurrentTickers] = useState<string[]>([]);
-  const [selectedTicker, setSelectedTicker] = useState(1);
-  const [shareAmount, setShareAmount] = useState(100);
-  const [notification, setNotification] = useState<NotificationData | null>(
+  const [testQueue, setTestQueue] = useState<TestCase[]>([]);
+  const [currentTest, setCurrentTest] = useState<TestCase | null>(null);
+  const [currentMessage, setCurrentMessage] = useState<TradingMessage | null>(
     null,
   );
+  const [userActions, setUserActions] = useState<TradingAction[]>([]);
+  const [testStartTime, setTestStartTime] = useState<number>(0);
+  const [messageStartTime, setMessageStartTime] = useState<number>(0);
+  const [completedTests, setCompletedTests] = useState<any[]>([]);
+  const [currentTestIndex, setCurrentTestIndex] = useState(0);
+  const [finalResults, setFinalResults] = useState<any>(null);
+  const [selectedTicker, setSelectedTicker] = useState(1);
+  const [shareAmount, setShareAmount] = useState(100);
+  const [notification, setNotification] = useState<{
+    id: string;
+    title: string;
+    message: string;
+    timestamp: string;
+    type: "info" | "success" | "warning" | "error";
+  } | null>(null);
   const [hotkeyState, setHotkeyState] = useState<HotkeyState>(
-    createInitialHotkeyState,
+    createInitialHotkeyState(),
   );
 
-  // Timer effect
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
+  const getCurrentLevel = () =>
+    practiceLevels.find((level) => level.level === selectedLevel);
+  const getAvailableTestCases = () =>
+    testCases.filter((test) => test.level === selectedLevel);
 
-    if (isTestActive && timeRemaining > 0) {
-      interval = setInterval(() => {
-        setTimeRemaining((prev) => {
-          if (prev <= 1000) {
-            endTest();
-            return 0;
-          }
-          return prev - 1000;
-        });
-      }, 1000);
-    }
+  const startPracticeSession = useCallback(() => {
+    const availableTests = getAvailableTestCases();
+    if (availableTests.length === 0) return;
 
-    return () => clearInterval(interval);
-  }, [isTestActive, timeRemaining]);
+    const shuffled = [...availableTests].sort(() => Math.random() - 0.5);
+    const selectedTests = shuffled.slice(
+      0,
+      Math.min(selectedTestCount, shuffled.length),
+    );
 
-  const startTest = (testCase: TestCase) => {
-    setCurrentTest(testCase);
-    setIsTestActive(true);
+    setTestQueue(selectedTests);
+    setCurrentTestIndex(0);
+    setCompletedTests([]);
     setUserActions([]);
-    setStartTime(Date.now());
-    setScore(0);
-    setTestResults(null);
+    setIsTestActive(true);
+    setTestStartTime(Date.now());
+    setFinalResults(null);
 
-    // Set up the test environment
-    const message = testCase.messages[0];
-    setCurrentTickers(message.tickers);
+    startNextTest(selectedTests[0]);
+  }, [selectedLevel, selectedTestCount, testCases]);
+
+  const startNextTest = useCallback((testCase: TestCase) => {
+    setCurrentTest(testCase);
+    setUserActions([]);
     setSelectedTicker(1);
 
-    // Set timer based on expected actions
-    const maxTiming = Math.max(
-      ...testCase.expectedActions.map((a) => a.timing || 30000),
-    );
-    setTimeRemaining(maxTiming);
+    if (testCase.messages.length > 0) {
+      const firstMessage = testCase.messages[0];
+      setCurrentMessage(firstMessage);
+      setMessageStartTime(Date.now());
+    }
+  }, []);
 
-    // Show the message
-    const notificationData: NotificationData = {
-      id: Date.now().toString(),
-      title: `${message.sender} - ${message.name}`,
-      message:
-        message.title && message.content
-          ? `${message.title}: ${message.content}`
-          : message.title || message.content || "",
-      timestamp: new Date().toISOString(),
-      type: "info",
-    };
+  const handleTrade = useCallback(
+    (action: "buy" | "sell", ticker: string, shares: number) => {
+      if (!currentMessage || !isTestActive) return;
 
-    setNotification(notificationData);
-  };
+      const currentTime = Date.now();
+      const timeSinceMessage = currentTime - messageStartTime;
 
-  const endTest = () => {
-    if (!currentTest) return;
+      const tradingAction: TradingAction = {
+        action,
+        ticker,
+        shares,
+        quantity: 1,
+        timestamp: new Date().toISOString(),
+        messageId: currentMessage.id,
+        timingMs: timeSinceMessage,
+      };
 
-    setIsTestActive(false);
+      setUserActions((prev) => [...prev, tradingAction]);
 
-    // Calculate score
-    const results = calculateScore(
+      const notificationData = {
+        id: Date.now().toString(),
+        title: "Action Recorded",
+        message: `${action.toUpperCase()} ${shares} shares of ${ticker} (${timeSinceMessage}ms)`,
+        timestamp: new Date().toISOString(),
+        type: "success" as const,
+      };
+      setNotification(notificationData);
+    },
+    [currentMessage, isTestActive, messageStartTime],
+  );
+
+  const handleClosePopup = useCallback(() => {
+    if (!currentTest || !isTestActive) return;
+
+    const testResults = calculateTestResults(
       currentTest,
       userActions,
-      Date.now() - startTime,
+      messageStartTime,
     );
-    setTestResults(results);
-    setScore(results.totalScore);
-  };
+    setCompletedTests((prev) => [...prev, testResults]);
 
-  const calculateScore = (
+    const nextTestIndex = currentTestIndex + 1;
+    if (nextTestIndex < testQueue.length) {
+      setCurrentTestIndex(nextTestIndex);
+      startNextTest(testQueue[nextTestIndex]);
+    } else {
+      finishPracticeSession();
+    }
+
+    setCurrentMessage(null);
+  }, [
+    currentTest,
+    isTestActive,
+    userActions,
+    messageStartTime,
+    currentTestIndex,
+    testQueue,
+  ]);
+
+  const finishPracticeSession = useCallback(() => {
+    const totalTime = Date.now() - testStartTime;
+    const allResults = [...completedTests];
+
+    if (currentTest && userActions.length > 0) {
+      const lastTestResults = calculateTestResults(
+        currentTest,
+        userActions,
+        messageStartTime,
+      );
+      allResults.push(lastTestResults);
+    }
+
+    const totalScore = allResults.reduce(
+      (sum, result) => sum + result.totalScore,
+      0,
+    );
+    const averageScore =
+      allResults.length > 0 ? totalScore / allResults.length : 0;
+    const bestTime = Math.min(...allResults.map((r) => r.totalTime));
+
+    const sessionResults = {
+      level: selectedLevel,
+      testCount: allResults.length,
+      totalScore,
+      averageScore,
+      bestTime,
+      totalTime,
+      results: allResults,
+    };
+
+    setFinalResults(sessionResults);
+    setIsTestActive(false);
+    setCurrentMessage(null);
+
+    saveToLeaderboard(sessionResults);
+  }, [
+    testStartTime,
+    completedTests,
+    currentTest,
+    userActions,
+    messageStartTime,
+    selectedLevel,
+  ]);
+
+  const calculateTestResults = (
     testCase: TestCase,
     actions: TradingAction[],
-    totalTime: number,
+    startTime: number,
   ) => {
     let correctActions = 0;
     let totalExpected = testCase.expectedActions.length;
     let speedBonus = 0;
+    let accuracyPenalty = 0;
     let details: any[] = [];
+
+    const endTime = Date.now();
+    const totalTime = endTime - startTime;
 
     testCase.expectedActions.forEach((expected) => {
       const matchingActions = actions.filter(
         (action) =>
           action.ticker === expected.ticker &&
           action.action === expected.action &&
-          action.shares === expected.shares &&
-          action.quantity === expected.quantity,
+          action.shares === expected.shares,
       );
 
-      if (matchingActions.length > 0) {
-        correctActions++;
+      let isCorrect = false;
+      let timingScore = 0;
 
-        // Speed bonus if completed quickly
-        const actionTime =
-          new Date(matchingActions[0].timestamp).getTime() - startTime;
-        if (expected.timing && actionTime < expected.timing * 0.5) {
-          speedBonus += 20;
+      if (matchingActions.length > 0) {
+        const action = matchingActions[0];
+        isCorrect = action.quantity === expected.quantity;
+
+        if (isCorrect) {
+          correctActions++;
+
+          const actionTime = action.timingMs || 0;
+          if (actionTime <= expected.timing * 0.5) {
+            speedBonus += 30;
+            timingScore = 30;
+          } else if (actionTime <= expected.timing) {
+            speedBonus += 15;
+            timingScore = 15;
+          }
+        }
+
+        if (action.quantity !== expected.quantity) {
+          accuracyPenalty += 10;
         }
       }
 
       details.push({
         expected,
-        completed: matchingActions.length > 0,
+        completed: isCorrect,
         userActions: matchingActions,
+        timingScore,
+        actionTime: matchingActions[0]?.timingMs || null,
       });
     });
 
-    const accuracyScore = (correctActions / totalExpected) * 70;
-    const totalScore = Math.round(accuracyScore + speedBonus);
+    const extraActions = actions.filter(
+      (action) =>
+        !testCase.expectedActions.some(
+          (expected) =>
+            expected.ticker === action.ticker &&
+            expected.action === action.action,
+        ),
+    );
+    accuracyPenalty += extraActions.length * 5;
+
+    const accuracyScore = Math.max(
+      0,
+      (correctActions / totalExpected) * 70 - accuracyPenalty,
+    );
+    const totalScore = Math.round(Math.max(0, accuracyScore + speedBonus));
 
     return {
+      testId: testCase.id,
       totalScore,
       accuracyScore: Math.round(accuracyScore),
       speedBonus: Math.round(speedBonus),
+      accuracyPenalty: Math.round(accuracyPenalty),
       correctActions,
       totalExpected,
+      extraActions: extraActions.length,
       totalTime,
       details,
     };
   };
 
-  const executeBuy = useCallback(
+  const saveToLeaderboard = (sessionResults: any) => {
+    fetcher.submit(
+      {
+        userId,
+        level: selectedLevel,
+        bestTime: sessionResults.bestTime,
+        bestScore: Math.max(
+          ...sessionResults.results.map((r: any) => r.totalScore),
+        ),
+        testCount: sessionResults.testCount,
+        averageScore: sessionResults.averageScore,
+      },
+      { method: "POST", encType: "application/json" },
+    );
+  };
+
+  const handleHotkeyBuy = useCallback(
     (quantity: number) => {
-      if (!isTestActive || currentTickers.length === 0) return;
-
-      const action: TradingAction = {
-        action: "buy",
-        ticker: currentTickers[selectedTicker - 1],
-        shares: shareAmount,
-        quantity,
-        timestamp: new Date().toISOString(),
-      };
-
-      setUserActions((prev) => [...prev, action]);
-
-      // Show confirmation
-      const notificationData: NotificationData = {
-        id: Date.now().toString(),
-        title: "Action Recorded",
-        message: `Buy ${quantity}x ${shareAmount} shares of ${action.ticker}`,
-        timestamp: new Date().toISOString(),
-        type: "success",
-      };
-      setNotification(notificationData);
+      if (!currentMessage) return;
+      const ticker = currentMessage.tickers[selectedTicker - 1];
+      handleTrade("buy", ticker, shareAmount);
     },
-    [isTestActive, currentTickers, selectedTicker, shareAmount],
+    [currentMessage, selectedTicker, shareAmount, handleTrade],
   );
 
-  const executeSell = useCallback(
+  const handleHotkeySell = useCallback(
     (quantity: number) => {
-      if (!isTestActive || currentTickers.length === 0) return;
-
-      const action: TradingAction = {
-        action: "sell",
-        ticker: currentTickers[selectedTicker - 1],
-        shares: shareAmount,
-        quantity,
-        timestamp: new Date().toISOString(),
-      };
-
-      setUserActions((prev) => [...prev, action]);
-
-      // Show confirmation
-      const notificationData: NotificationData = {
-        id: Date.now().toString(),
-        title: "Action Recorded",
-        message: `Sell ${quantity}x ${shareAmount} shares of ${action.ticker}`,
-        timestamp: new Date().toISOString(),
-        type: "success",
-      };
-      setNotification(notificationData);
+      if (!currentMessage) return;
+      const ticker = currentMessage.tickers[selectedTicker - 1];
+      handleTrade("sell", ticker, shareAmount);
     },
-    [isTestActive, currentTickers, selectedTicker, shareAmount],
+    [currentMessage, selectedTicker, shareAmount, handleTrade],
   );
 
-  const handleTickerChange = useCallback(
-    (tickerNumber: number) => {
-      if (tickerNumber >= 1 && tickerNumber <= currentTickers.length) {
-        setSelectedTicker(tickerNumber);
-      }
-    },
-    [currentTickers.length],
-  );
-
-  const handleDisableTemporary = useCallback(() => {
-    setNotification(null);
+  const handleTickerChange = useCallback((ticker: number) => {
+    setSelectedTicker(ticker);
   }, []);
 
-  const filteredTestCases = testCases.filter(
-    (test) => test.level === selectedLevel,
-  );
+  const handleShareChange = useCallback((shares: number) => {
+    setShareAmount(shares);
+  }, []);
+
+  const handleDisableTemporary = useCallback(() => {
+    handleClosePopup();
+  }, [handleClosePopup]);
+
+  const currentLevel = getCurrentLevel();
+  const availableTests = getAvailableTestCases();
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
-      {/* Keyboard Handler */}
       <KeyboardHandler
         hotkeyState={hotkeyState}
-        totalTickers={currentTickers.length}
-        onBuy={executeBuy}
-        onSell={executeSell}
+        totalTickers={currentMessage?.tickers.length || 0}
+        onBuy={handleHotkeyBuy}
+        onSell={handleHotkeySell}
         onTickerChange={handleTickerChange}
-        onShareChange={setShareAmount}
+        onShareChange={handleShareChange}
         onDisableTemporary={handleDisableTemporary}
         onStateChange={setHotkeyState}
       />
 
-      {/* Notification Popup */}
+      <TradingPopup
+        message={currentMessage}
+        onClose={handleClosePopup}
+        onTrade={handleTrade}
+        selectedTicker={selectedTicker}
+        shareAmount={shareAmount}
+        hotkeyState={hotkeyState}
+      />
+
       <NotificationPopup
         notification={notification}
         onClose={() => setNotification(null)}
       />
 
-      {/* Header */}
       <header className="flex items-center justify-between bg-gray-800 p-4">
         <h1 className="text-2xl font-bold">Practice Mode</h1>
         <div className="flex items-center space-x-4">
           {isTestActive && (
-            <div className="rounded-lg bg-blue-600 px-4 py-2">
-              Time: {Math.ceil(timeRemaining / 1000)}s
+            <div className="flex items-center space-x-2">
+              <div className="rounded-lg bg-blue-600 px-4 py-2">
+                Test: {currentTestIndex + 1}/{testQueue.length}
+              </div>
+              <button
+                onClick={finishPracticeSession}
+                className="rounded bg-red-600 px-3 py-1 text-sm hover:bg-red-700"
+              >
+                End Session
+              </button>
             </div>
           )}
-          <Link to="/dashboard" className="btn-secondary">
+          <Link to="/dashboard" className="text-blue-400 hover:text-blue-300">
             Back to Dashboard
           </Link>
         </div>
       </header>
 
-      <main className="space-y-6 p-6">
-        {!isTestActive && !testResults ? (
-          /* Test Selection */
-          <div className="space-y-6">
-            {/* Level Selection */}
-            <div className="rounded-lg bg-gray-800 p-6">
-              <h2 className="mb-4 text-xl font-semibold">Select Difficulty</h2>
-              <div className="flex space-x-4">
-                {(["easy", "medium", "hard"] as const).map((level) => (
-                  <button
-                    key={level}
-                    onClick={() => setSelectedLevel(level)}
-                    className={`rounded-lg px-6 py-3 font-medium capitalize transition-colors ${
-                      selectedLevel === level
-                        ? "bg-blue-600 text-white"
-                        : "bg-gray-700 text-gray-300 hover:bg-gray-600"
-                    }`}
-                  >
-                    {level}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Test Cases */}
-            <div className="rounded-lg bg-gray-800 p-6">
-              <h2 className="mb-4 text-xl font-semibold">
-                {selectedLevel.charAt(0).toUpperCase() + selectedLevel.slice(1)}{" "}
-                Tests
-              </h2>
-              <div className="grid gap-4">
-                {filteredTestCases.map((testCase) => (
-                  <div key={testCase.id} className="rounded-lg bg-gray-700 p-4">
-                    <div className="mb-3 flex items-start justify-between">
-                      <div>
-                        <h3 className="font-semibold">{testCase.id}</h3>
-                        <p className="text-sm text-gray-400">
-                          {testCase.expectedActions.length} expected actions
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => startTest(testCase)}
-                        className="btn-success"
-                      >
-                        Start Test
-                      </button>
-                    </div>
-
-                    <div className="text-sm">
-                      <p>
-                        <strong>Message:</strong>{" "}
-                        {testCase.messages[0].title ||
-                          testCase.messages[0].content}
-                      </p>
-                      <p>
-                        <strong>Tickers:</strong>{" "}
-                        {testCase.messages[0].tickers.join(", ")}
-                      </p>
-                      <p>
-                        <strong>Time Limit:</strong>{" "}
-                        {Math.max(
-                          ...testCase.expectedActions.map(
-                            (a) => a.timing || 30000,
-                          ),
-                        ) / 1000}
-                        s
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        ) : isTestActive ? (
-          /* Active Test */
-          <div className="space-y-6">
-            {/* Test Info */}
-            <div className="rounded-lg bg-gray-800 p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-xl font-semibold">
-                    Test: {currentTest?.id}
-                  </h2>
-                  <p className="text-gray-400">
-                    Actions completed: {userActions.length}
-                  </p>
-                </div>
-                <button onClick={endTest} className="btn-danger">
-                  End Test
-                </button>
-              </div>
-            </div>
-
-            {/* Share Amount Input */}
-            <ShareAmountInput
-              value={shareAmount}
-              onChange={setShareAmount}
-              isChangingViaHotkey={hotkeyState.isChangingShares}
-              hotkeyBuffer={hotkeyState.shareChangeBuffer}
-            />
-
-            {/* Trading Actions */}
-            <div className="rounded-lg bg-gray-800 p-4">
-              <h3 className="mb-3 text-lg font-semibold">Manual Actions</h3>
-              <div className="space-x-4">
-                <button
-                  onClick={() => executeBuy(1)}
-                  className="btn-success"
-                  disabled={currentTickers.length === 0}
-                >
-                  Buy (B)
-                </button>
-                <button
-                  onClick={() => executeSell(1)}
-                  className="btn-danger"
-                  disabled={currentTickers.length === 0}
-                >
-                  Sell (S)
-                </button>
-              </div>
-            </div>
-
-            {/* Ticker Selection */}
-            <TickerSelector
-              tickers={currentTickers}
-              selectedTicker={selectedTicker}
-              onTickerSelect={handleTickerChange}
-            />
-
-            {/* User Actions Log */}
-            <div className="rounded-lg bg-gray-800 p-4">
-              <h3 className="mb-3 text-lg font-semibold">Your Actions</h3>
-              {userActions.length > 0 ? (
-                <div className="space-y-2">
-                  {userActions.map((action, index) => (
-                    <div
-                      key={index}
-                      className="rounded bg-gray-700 p-2 text-sm"
+      <main className="p-6">
+        {!isTestActive && !finalResults ? (
+          <div className="space-y-4">
+            <div className="grid gap-4 lg:grid-cols-3">
+              <div className="rounded-lg bg-gray-800 p-4 lg:col-span-2">
+                <h2 className="mb-3 text-lg font-semibold">
+                  Select Practice Level
+                </h2>
+                <div className="grid gap-3 md:grid-cols-3">
+                  {practiceLevels.map((level) => (
+                    <button
+                      key={level.level}
+                      onClick={() => setSelectedLevel(level.level)}
+                      className={`rounded-lg p-3 text-left transition-colors ${
+                        selectedLevel === level.level
+                          ? "bg-blue-600 text-white"
+                          : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                      }`}
                     >
-                      <span
-                        className={`font-semibold ${action.action === "buy" ? "text-green-400" : "text-red-400"}`}
-                      >
-                        {action.action.toUpperCase()}
-                      </span>{" "}
-                      {action.quantity}x {action.shares} shares of{" "}
-                      {action.ticker}
-                      <span className="ml-2 text-gray-400">
-                        ({new Date(action.timestamp).toLocaleTimeString()})
-                      </span>
-                    </div>
+                      <h3 className="text-sm font-semibold capitalize">
+                        {level.level}
+                      </h3>
+                      <p className="text-xs text-gray-200">{level.name}</p>
+                      <p className="text-xs text-gray-400">
+                        {level.description}
+                      </p>
+                      <p className="mt-1 text-xs">
+                        {
+                          testCases.filter((t) => t.level === level.level)
+                            .length
+                        }{" "}
+                        available tests
+                      </p>
+                    </button>
                   ))}
                 </div>
-              ) : (
-                <p className="text-gray-400">No actions recorded yet</p>
+              </div>
+
+              {/* Configuration - 1/3 width */}
+              {currentLevel && (
+                <div className="rounded-lg bg-gray-800 p-4">
+                  <h2 className="mb-3 text-lg font-semibold">Configure</h2>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <label className="mb-1 block text-xs font-medium">
+                          Test Cases:
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            min="1"
+                            max={availableTests.length}
+                            value={selectedTestCount}
+                            onChange={(e) => {
+                              const value = parseInt(e.target.value) || 1;
+                              const clampedValue = Math.max(
+                                1,
+                                Math.min(availableTests.length, value),
+                              );
+                              setSelectedTestCount(clampedValue);
+                            }}
+                            className="w-16 rounded bg-gray-700 px-2 py-1 text-xs text-white"
+                          />
+                          <span className="text-xs text-gray-400">
+                            / {availableTests.length}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1 text-xs text-gray-400">
+                        <div>Time: {currentLevel.timeLimit / 1000}s</div>
+                        <div>Target: {currentLevel.requiredScore}%</div>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={startPracticeSession}
+                      disabled={availableTests.length === 0}
+                      className="w-full rounded bg-green-600 px-3 py-2 text-xs font-medium hover:bg-green-700 disabled:bg-gray-600"
+                    >
+                      Start Practice
+                    </button>
+                  </div>
+                </div>
               )}
             </div>
+
+            {/* Leaderboard */}
+            <div className="rounded-lg bg-gray-800 p-4">
+              <h2 className="mb-4 text-lg font-semibold">
+                Leaderboard & Your Stats
+              </h2>
+              <div className="grid gap-4 md:grid-cols-3">
+                {["easy", "medium", "hard"].map((level) => {
+                  // Get all attempts from all users for this level
+                  const allAttempts = leaderboard
+                    .filter((entry) => entry.level === level)
+                    .flatMap((entry) =>
+                      entry.attempts.map((attempt) => ({
+                        ...attempt,
+                        userId: entry.userId,
+                      })),
+                    )
+                    .sort((a, b) => b.score - a.score || a.time - b.time)
+                    .slice(0, 5);
+
+                  const userEntry = leaderboard.find(
+                    (entry) => entry.userId === userId && entry.level === level,
+                  );
+
+                  const allLevelEntries = leaderboard
+                    .filter((entry) => entry.level === level)
+                    .sort(
+                      (a, b) =>
+                        b.bestScore - a.bestScore || a.bestTime - b.bestTime,
+                    );
+
+                  const userRank = userEntry
+                    ? allLevelEntries.findIndex(
+                        (entry) => entry.userId === userId,
+                      ) + 1
+                    : null;
+
+                  return (
+                    <div key={level} className="rounded-lg bg-gray-700 p-3">
+                      <h3 className="mb-3 text-center text-sm font-semibold capitalize">
+                        {level}
+                      </h3>
+
+                      {userEntry && (
+                        <div className="mb-3 rounded-lg bg-blue-900/50 p-2">
+                          <div className="mb-1 text-xs font-semibold text-blue-400">
+                            Your Performance
+                          </div>
+                          <div className="space-y-1 text-xs">
+                            <div>
+                              Rank:{" "}
+                              <span className="font-medium">#{userRank}</span>{" "}
+                              of {allLevelEntries.length} players
+                            </div>
+                            <div>
+                              Best:{" "}
+                              <span className="font-medium">
+                                {userEntry.bestScore} pts
+                              </span>{" "}
+                              • {userEntry.bestTime / 1000}s
+                            </div>
+                            <div>
+                              Attempts:{" "}
+                              <span className="font-medium">
+                                {userEntry.attempts.length}
+                              </span>{" "}
+                              • Avg: {userEntry.averageScore}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {allAttempts.length > 0 ? (
+                        <div className="space-y-1">
+                          <div className="mb-2 text-center text-xs font-medium text-gray-300">
+                            🏆 Top 5 Runs
+                          </div>
+                          {allAttempts.map((attempt, index) => {
+                            const isCurrentUser = attempt.userId === userId;
+                            const rankIcon =
+                              index === 0
+                                ? "🥇"
+                                : index === 1
+                                  ? "🥈"
+                                  : index === 2
+                                    ? "🥉"
+                                    : `#${index + 1}`;
+
+                            return (
+                              <div
+                                key={`${attempt.userId}-${attempt.timestamp}`}
+                                className={`flex items-center justify-between rounded-lg p-2 text-xs ${
+                                  isCurrentUser
+                                    ? "bg-blue-900/30 font-medium text-blue-300"
+                                    : "text-gray-300"
+                                }`}
+                              >
+                                <div className="flex items-center gap-2">
+                                  <span className="min-w-[16px] text-xs">
+                                    {rankIcon}
+                                  </span>
+                                  <span>
+                                    {attempt.userId}
+                                    {isCurrentUser && " (You)"}
+                                  </span>
+                                </div>
+                                <div className="text-right">
+                                  <div className="font-medium">
+                                    {attempt.score} pts
+                                  </div>
+                                  <div className="text-xs text-gray-400">
+                                    {attempt.time / 1000}s
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="py-4 text-center">
+                          <p className="mb-1 text-xs text-gray-400">
+                            No records yet
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            Be the first to play!
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
-        ) : (
-          /* Test Results */
+        ) : finalResults ? (
           <div className="space-y-6">
             <div className="rounded-lg bg-gray-800 p-6">
-              <h2 className="mb-4 text-2xl font-semibold">Test Results</h2>
+              <h2 className="mb-4 text-2xl font-semibold">Session Results</h2>
 
-              <div className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-3">
+              <div className="mb-6 grid grid-cols-2 gap-6 md:grid-cols-4">
                 <div className="text-center">
                   <div className="text-3xl font-bold text-blue-400">
-                    {score}
+                    {Math.round(finalResults.averageScore)}
                   </div>
-                  <div className="text-gray-400">Total Score</div>
+                  <div className="text-gray-400">Avg Score</div>
                 </div>
                 <div className="text-center">
                   <div className="text-3xl font-bold text-green-400">
-                    {testResults?.accuracyScore}
+                    {finalResults.testCount}
                   </div>
-                  <div className="text-gray-400">Accuracy Score</div>
+                  <div className="text-gray-400">Tests</div>
                 </div>
                 <div className="text-center">
                   <div className="text-3xl font-bold text-yellow-400">
-                    {testResults?.speedBonus}
+                    {finalResults.bestTime / 1000}s
                   </div>
-                  <div className="text-gray-400">Speed Bonus</div>
+                  <div className="text-gray-400">Best Time</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-purple-400">
+                    {finalResults.totalTime / 1000}s
+                  </div>
+                  <div className="text-gray-400">Total Time</div>
                 </div>
               </div>
 
-              <div className="mb-6">
-                <p className="text-lg">
-                  <strong>Accuracy:</strong> {testResults?.correctActions}/
-                  {testResults?.totalExpected} actions correct
-                </p>
-                <p className="text-lg">
-                  <strong>Time:</strong>{" "}
-                  {Math.round(testResults?.totalTime / 1000)}s
-                </p>
-              </div>
-
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Detailed Results:</h3>
-                {testResults?.details.map((detail: any, index: number) => (
-                  <div
-                    key={index}
-                    className={`rounded p-3 ${detail.completed ? "bg-green-900" : "bg-red-900"}`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span>
-                        {detail.expected.action.toUpperCase()}{" "}
-                        {detail.expected.quantity}x {detail.expected.shares}{" "}
-                        {detail.expected.ticker}
-                      </span>
-                      <span
-                        className={`font-semibold ${detail.completed ? "text-green-400" : "text-red-400"}`}
-                      >
-                        {detail.completed ? "✓ Completed" : "✗ Missed"}
-                      </span>
+                <h3 className="text-lg font-semibold">
+                  Individual Test Results:
+                </h3>
+                {finalResults.results.map((result: any, index: number) => (
+                  <div key={index} className="rounded bg-gray-700 p-4">
+                    <div className="mb-2 flex items-center justify-between">
+                      <h4 className="font-semibold">
+                        Test {index + 1}: {result.testId}
+                      </h4>
+                      <div className="flex space-x-4 text-sm">
+                        <span className="text-blue-400">
+                          Score: {result.totalScore}
+                        </span>
+                        <span className="text-green-400">
+                          Time: {result.totalTime / 1000}s
+                        </span>
+                      </div>
+                    </div>
+                    <div className="text-sm text-gray-300">
+                      <p>
+                        Accuracy: {result.correctActions}/{result.totalExpected}{" "}
+                        ({Math.round(result.accuracyScore)})
+                      </p>
+                      <p>Speed Bonus: {result.speedBonus}</p>
+                      {result.extraActions > 0 && (
+                        <p className="text-red-400">
+                          Extra Actions: {result.extraActions}
+                        </p>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -571,20 +831,100 @@ export default function Practice() {
 
               <div className="mt-6 flex space-x-4">
                 <button
-                  onClick={() => {
-                    setTestResults(null);
-                    setCurrentTest(null);
-                  }}
-                  className="btn-primary"
+                  onClick={() => setFinalResults(null)}
+                  className="rounded bg-blue-600 px-6 py-2 hover:bg-blue-700"
                 >
-                  Try Another Test
+                  New Session
                 </button>
                 <button
-                  onClick={() => currentTest && startTest(currentTest)}
-                  className="btn-secondary"
+                  onClick={startPracticeSession}
+                  className="rounded bg-green-600 px-6 py-2 hover:bg-green-700"
                 >
-                  Retry Same Test
+                  Retry Same Config
                 </button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            <div className="rounded-lg bg-gray-800 p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-semibold">
+                    Active Session - {selectedLevel.toUpperCase()}
+                  </h2>
+                  <p className="text-gray-400">
+                    Test {currentTestIndex + 1} of {testQueue.length}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm text-gray-400">
+                    Current Test: {currentTest?.id}
+                  </p>
+                  <p className="text-sm text-gray-400">
+                    Actions: {userActions.length}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-lg bg-gray-800 p-4">
+              <h3 className="mb-3 text-lg font-semibold">Actions This Test</h3>
+              {userActions.length > 0 ? (
+                <div className="space-y-2">
+                  {userActions.map((action, index) => (
+                    <div
+                      key={index}
+                      className="rounded bg-gray-700 p-2 text-sm"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span>
+                          <span
+                            className={`font-semibold ${action.action === "buy" ? "text-green-400" : "text-red-400"}`}
+                          >
+                            {action.action.toUpperCase()}
+                          </span>{" "}
+                          {action.shares} shares of {action.ticker}
+                        </span>
+                        <span className="text-gray-400">
+                          {action.timingMs}ms
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-400">No actions recorded yet</p>
+              )}
+            </div>
+
+            {/* Controls Help */}
+            <div className="rounded-lg bg-gray-800 p-4">
+              <h3 className="mb-3 text-lg font-semibold">Controls</h3>
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <div>
+                  <h4 className="mb-1 text-sm font-semibold text-blue-400">
+                    Navigation
+                  </h4>
+                  <ul className="space-y-1 text-xs text-gray-300">
+                    <li>
+                      • Numbers: Select ticker (1-
+                      {currentMessage?.tickers.length || 0})
+                    </li>
+                    <li>• Enter: Confirm selection</li>
+                    <li>• Backspace/Esc: Close popup</li>
+                  </ul>
+                </div>
+                <div>
+                  <h4 className="mb-1 text-sm font-semibold text-green-400">
+                    Trading
+                  </h4>
+                  <ul className="space-y-1 text-xs text-gray-300">
+                    <li>• B: Buy current ticker</li>
+                    <li>• S: Sell current ticker</li>
+                    <li>• C+number+Enter: Set share amount</li>
+                  </ul>
+                </div>
               </div>
             </div>
           </div>

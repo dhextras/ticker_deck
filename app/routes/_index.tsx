@@ -13,22 +13,26 @@ export async function loader({ request }: LoaderFunctionArgs) {
 export async function action({ request }: ActionFunctionArgs) {
   const formData = await request.formData();
   const username = formData.get("username");
+  const custom_name = formData.get("custom_name");
   const password = formData.get("password");
 
-  if (typeof username !== "string" || typeof password !== "string") {
+  if (
+    typeof username !== "string" ||
+    typeof password !== "string" ||
+    typeof custom_name !== "string"
+  ) {
     return json({ error: "Invalid form data" }, { status: 400 });
   }
 
-  const userId = await verifyLogin(username, password);
-  if (!userId) {
+  const success = await verifyLogin(username, password);
+  if (!success) {
     return json({ error: "Invalid credentials" }, { status: 401 });
   }
 
-  return createUserSession(userId, "/dashboard");
+  return createUserSession(custom_name, "/dashboard");
 }
 
 export default function Login() {
-  console.log("fdas");
   const actionData = useActionData<typeof action>();
 
   return (
@@ -44,6 +48,23 @@ export default function Login() {
         </div>
 
         <Form method="post" className="mt-8 space-y-6">
+          <div>
+            <label
+              htmlFor="custom_name"
+              className="block text-sm font-medium text-gray-300"
+            >
+              Name
+            </label>
+            <input
+              id="custom_name"
+              name="custom_name"
+              type="text"
+              required
+              className="input-field mt-1 w-full"
+              placeholder="Enter Name ( will be used in leaderboard )"
+            />
+          </div>
+
           <div>
             <label
               htmlFor="username"

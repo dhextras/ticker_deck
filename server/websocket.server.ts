@@ -48,7 +48,7 @@ export function setupWebSocket(io: SocketIOServer) {
         // Process multiple orders (quantity support)
         const responses = [];
         for (let i = 0; i < action.quantity; i++) {
-          // Log each individual action
+          // Log each individual action with message context
           const logResult = await logTradingAction({
             timestamp: new Date().toISOString(),
             userId: socket.data.userId,
@@ -57,6 +57,7 @@ export function setupWebSocket(io: SocketIOServer) {
             shares: action.shares,
             quantity: 1, // Each log entry is for 1 execution
             success: true,
+            messageId: action.messageId, // Link to the triggering message
           });
 
           responses.push({
@@ -76,6 +77,7 @@ export function setupWebSocket(io: SocketIOServer) {
           shares: action.shares,
           quantity: action.quantity,
           timestamp: new Date().toISOString(),
+          messageId: action.messageId, // Include message ID in response
           orders: responses,
         });
       } catch (error) {
@@ -91,6 +93,7 @@ export function setupWebSocket(io: SocketIOServer) {
           quantity: action.quantity,
           success: false,
           error: error instanceof Error ? error.message : "Unknown error",
+          messageId: action.messageId,
         });
 
         socket.emit("trading_response", {
@@ -127,29 +130,22 @@ export function setupWebSocket(io: SocketIOServer) {
           return;
         }
 
-        // Format message for display
-        let displayMessage = "";
-        if (hasTitle && hasContent) {
-          displayMessage = `title: ${message.title} content: ${message.content}`;
-        } else if (hasTitle) {
-          displayMessage = `title: ${message.title}`;
-        } else if (hasContent) {
-          displayMessage = `content: ${message.content}`;
-        }
+        // Generate unique message ID if not provided
+        const messageId =
+          message.id ||
+          `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-        // Add timestamp if not present
-        const messageWithTimestamp: TradingMessage = {
+        // Add timestamp and ID if not present
+        const messageWithMetadata: TradingMessage = {
           ...message,
+          id: messageId,
           timestamp: message.timestamp || new Date().toISOString(),
         };
 
         // Broadcast to all connected clients
-        io.emit("trading_message", {
-          ...messageWithTimestamp,
-          displayMessage,
-        });
+        io.emit("trading_message", messageWithMetadata);
 
-        console.log(`Message broadcasted: ${displayMessage}`);
+        console.log(`Message broadcasted with ID: ${messageId}`);
       } catch (error) {
         console.error("Error processing trading message:", error);
         socket.emit("message_error", {

@@ -5,3 +5,4 @@ node_modules
 .env
 
 data/trading-history.json
+data/practice-leaderboard.json

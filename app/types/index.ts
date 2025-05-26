@@ -1,4 +1,5 @@
 export interface TradingMessage {
+  id: string;
   sender: string;
   name: string;
   title?: string;
@@ -16,6 +17,7 @@ export interface TradingLog {
   quantity: number;
   success: boolean;
   error?: string;
+  messageId?: string;
 }
 
 export interface TestCase {
@@ -39,6 +41,8 @@ export interface TradingAction {
   shares: number;
   quantity: number;
   timestamp: string;
+  messageId?: string;
+  timingMs?: number;
 }
 
 export interface NotificationData {
@@ -52,4 +56,9 @@ export interface NotificationData {
 export interface User {
   id: string;
   username: string;
+}
+
+export interface TradingPopupData {
+  message: TradingMessage;
+  isVisible: boolean;
 }

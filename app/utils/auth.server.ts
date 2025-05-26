@@ -89,7 +89,7 @@ export async function logout(request: Request) {
 export async function verifyLogin(
   username: string,
   password: string,
-): Promise<string | null> {
+): Promise<Boolean | null> {
   const envUsername = process.env.USERNAME!;
   const envPassword = process.env.PASSWORD!;
 
@@ -97,13 +97,14 @@ export async function verifyLogin(
     return null;
   }
 
-  // FIXME: For simplicity, we'll compare plain text passwords
+  // NOTE: For simplicity, we'll compare plain text passwords
   // In production, you'd hash the password in .env and compare hashes
+  // though it works for our use case it doesnt have to be world class secure
   if (password !== envPassword) {
     return null;
   }
 
-  return "user_1";
+  return true;
 }
 
 export function verifyToken(token: string): string | null {
