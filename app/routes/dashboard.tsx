@@ -1,23 +1,23 @@
 import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
-import { useLoaderData, Form, Link } from "@remix-run/react";
-import { useEffect, useState, useCallback } from "react";
+import { Form, Link, useLoaderData } from "@remix-run/react";
+import { existsSync, readFileSync } from "fs";
+import { join } from "path";
+import { useCallback, useEffect, useState } from "react";
+import type { TradingAction, TradingLog, TradingMessage } from "~/types";
 import { requireUserId } from "~/utils/auth.server";
+import { createInitialHotkeyState, type HotkeyState } from "~/utils/hotkeys";
 import {
   initSocket,
-  sendTradingAction,
-  onMessage,
-  onTradingResponse,
   offMessage,
   offTradingResponse,
+  onMessage,
+  onTradingResponse,
+  sendTradingAction,
 } from "~/utils/websocket.client";
-import type { TradingMessage, TradingAction, TradingLog } from "~/types";
-import { createInitialHotkeyState, type HotkeyState } from "~/utils/hotkeys";
-import { join } from "path";
-import { existsSync, readFileSync } from "fs";
 
-import TradingPopup from "~/components/TradingPopup";
 import NotificationPopup from "~/components/NotificationPopup";
+import TradingPopup from "~/components/TradingPopup";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const userId = await requireUserId(request);

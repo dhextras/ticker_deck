@@ -1,7 +1,7 @@
-import { useEffect, useState, useRef } from "react";
-import { handleKeyPress } from "~/utils/hotkeys";
-import type { HotkeyState } from "~/utils/hotkeys";
+import { useEffect, useRef, useState } from "react";
 import type { TradingMessage } from "~/types";
+import type { HotkeyState } from "~/utils/hotkeys";
+import { handleKeyPress } from "~/utils/hotkeys";
 
 interface TradingPopupProps {
   message: TradingMessage | null;

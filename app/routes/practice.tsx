@@ -1,15 +1,15 @@
-import type { LoaderFunctionArgs, ActionFunctionArgs } from "@remix-run/node";
+import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
-import { useLoaderData, Form, Link, useFetcher } from "@remix-run/react";
-import { useState, useCallback, useEffect } from "react";
-import { requireUserId } from "~/utils/auth.server";
-import type { TradingMessage, TradingAction } from "~/types";
-import { createInitialHotkeyState, type HotkeyState } from "~/utils/hotkeys";
-import { join } from "path";
+import { Form, Link, useFetcher, useLoaderData } from "@remix-run/react";
 import { existsSync, readFileSync, writeFileSync } from "fs";
+import { join } from "path";
+import { useCallback, useEffect, useState } from "react";
+import type { TradingAction, TradingMessage } from "~/types";
+import { requireUserId } from "~/utils/auth.server";
+import { createInitialHotkeyState, type HotkeyState } from "~/utils/hotkeys";
 
-import TradingPopup from "~/components/TradingPopup";
 import NotificationPopup from "~/components/NotificationPopup";
+import TradingPopup from "~/components/TradingPopup";
 
 interface PracticeLevel {
   level: "easy" | "medium" | "hard";
