@@ -1,4 +1,5 @@
-# Quick Trade
+# Ticker Deck
+
 
 Instant trade decisions. Analyze, choose, execute.
 

@@ -13,7 +13,7 @@ import "./tailwind.css";
 
 export const meta: MetaFunction = () => {
   return [
-    { title: "Quick Trade" },
+    { title: "Ticker Deck" },
     {
       name: "description",
       content: "Instant trade decisions. Analyze, choose, execute",

@@ -49,7 +49,7 @@ export default function Login() {
       <div className="w-full max-w-md space-y-8 p-8">
         <div>
           <h1 className="text-center text-3xl font-bold text-white">
-            Quick Trade
+            Ticker Deck
           </h1>
           <p className="mt-2 text-center text-gray-400">
             Sign in to start trading
