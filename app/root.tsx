@@ -13,8 +13,11 @@ import "./tailwind.css";
 
 export const meta: MetaFunction = () => {
   return [
-    { title: "Trading Simulation" },
-    { name: "description", content: "Real-time trading simulation app" },
+    { title: "Quick Trade" },
+    {
+      name: "description",
+      content: "Instant trade decisions. Analyze, choose, execute",
+    },
   ];
 };
 

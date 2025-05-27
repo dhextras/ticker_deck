@@ -1,40 +1,55 @@
-# Welcome to Remix!
+# Quick Trade
 
-- 📖 [Remix docs](https://remix.run/docs)
+Instant trade decisions. Analyze, choose, execute.
 
-## Development
 
-Run the dev server:
+## 🚀 Getting Started
 
-```shellscript
+1. Install dependencies:
+
+```bash
+npm install
+```
+
+2. Run the development server:
+
+```bash
 npm run dev
 ```
 
-## Deployment
+3. Build for production:
 
-First, build your app for production:
-
-```sh
+```bash
 npm run build
 ```
 
-Then run the app in production mode:
+4. Start the production server:
 
-```sh
-npm start
+```bash
+npm run start
 ```
 
-Now you'll need to pick a host to deploy it to.
+## 🛠️ Code Formatting & Linting
 
-### DIY
+- Format the code:
 
-If you're familiar with deploying Node applications, the built-in Remix app server is production-ready.
+```bash
+npm run format
+```
 
-Make sure to deploy the output of `npm run build`
+- Lint the code:
 
-- `build/server`
-- `build/client`
+```bash
+npm run lint
+```
 
-## Styling
+- Type-check the code:
 
-This template comes with [Tailwind CSS](https://tailwindcss.com/) already configured for a simple default starting experience. You can use whatever css framework you prefer. See the [Vite docs on css](https://vitejs.dev/guide/features.html#css) for more information.
+```bash
+npm run typecheck
+```
+
+---
+
+Built with [Remix](https://remix.run/).
+
