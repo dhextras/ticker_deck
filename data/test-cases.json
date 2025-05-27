@@ -1,24 +1,70 @@
 [
   {
-    "id": "easy-001",
+    "id": "easy-003",
     "level": "easy",
     "messages": [
       {
-        "sender": "MarketBot",
-        "name": "Alert",
-        "title": "Buy Signal",
-        "content": "Strong upward momentum detected",
-        "tickers": ["AAPL", "GOOGL", "MSFT"],
-        "timestamp": "2024-01-15T10:30:00Z"
+        "sender": "NewsDesk",
+        "name": "Market Update",
+        "title": "Nuclear Energy Buzz",
+        "content": "Enthusiasm for nuclear is back, with Terrestrial Energy at the center. HOND SPAC is flying under the radar as it inks a deal with Terrestrial Energy, pushing its valuation higher. Keep an eye on this stealth play.",
+        "tickers": ["SPAC", "HOND", "TER", "OKLO"],
+        "timestamp": "2024-02-10T09:30:00Z"
       }
     ],
     "expectedActions": [
       {
-        "ticker": "AAPL",
+        "ticker": "HOND",
         "action": "buy",
-        "shares": 100,
-        "quantity": 1,
+        "shares": 500,
+        "quantity": 2,
         "timing": 5000
+      }
+    ]
+  },
+  {
+    "id": "easy-004",
+    "level": "easy",
+    "messages": [
+      {
+        "sender": "InsiderInfo",
+        "name": "CEO Moves",
+        "title": "Inflection Point in AIRS",
+        "content": "Insider buying from AIRS CEO signals confidence. Strong consumer demand for skin tightening services and potential tailwind from GLP-1 trends reinforce AIRS positioning.",
+        "tickers": ["AIRS", "STIM", "TMS"],
+        "timestamp": "2024-02-11T13:00:00Z"
+      }
+    ],
+    "expectedActions": [
+      {
+        "ticker": "AIRS",
+        "action": "buy",
+        "shares": 500,
+        "quantity": 2,
+        "timing": 5000
+      }
+    ]
+  },
+  {
+    "id": "easy-005",
+    "level": "easy",
+    "messages": [
+      {
+        "sender": "TradeRadar",
+        "name": "Basket Update",
+        "title": "CITRINDEX UPDATE",
+        "content": "Adding WRBY long equal weight to the Phase 2 AI basket. Their partnership with Google has some very interesting potential.",
+        "tickers": ["WRBY"],
+        "timestamp": "2024-02-12T08:45:00Z"
+      }
+    ],
+    "expectedActions": [
+      {
+        "ticker": "WRBY",
+        "action": "buy",
+        "shares": 500,
+        "quantity": 2,
+        "timing": 6000
       }
     ]
   },
@@ -27,21 +73,44 @@
     "level": "easy",
     "messages": [
       {
-        "sender": "TradingDesk",
-        "name": "Recommendation",
-        "title": "Sell Alert",
-        "content": "Take profits on tech stocks",
-        "tickers": ["TSLA", "NVDA"],
-        "timestamp": "2024-01-15T11:15:00Z"
+        "sender": "MarketBuzz",
+        "name": "Trend Alert",
+        "title": "Healthcare Surge",
+        "content": "Renewed interest in biotech is lifting PHAR shares. The company just announced a major licensing deal with a global pharma giant. Expect positive momentum.",
+        "tickers": ["PHAR", "MRK", "PFE"],
+        "timestamp": "2024-02-12T10:00:00Z"
       }
     ],
     "expectedActions": [
       {
-        "ticker": "TSLA",
-        "action": "sell",
-        "shares": 50,
+        "ticker": "PHAR",
+        "action": "buy",
+        "shares": 500,
         "quantity": 2,
-        "timing": 8000
+        "timing": 4500
+      }
+    ]
+  },
+  {
+    "id": "easy-001",
+    "level": "easy",
+    "messages": [
+      {
+        "sender": "InvestorNote",
+        "name": "Recommendation",
+        "title": "Tech Weakness",
+        "content": "After a weak quarter, the recommendation is to trim positions in ZYGO to reduce exposure. The stock has underperformed expectations significantly.",
+        "tickers": ["ZYGO", "INTC"],
+        "timestamp": "2024-02-12T11:30:00Z"
+      }
+    ],
+    "expectedActions": [
+      {
+        "ticker": "ZYGO",
+        "action": "sell",
+        "shares": 1000,
+        "quantity": 1,
+        "timing": 7000
       }
     ]
   },
@@ -50,28 +119,88 @@
     "level": "medium",
     "messages": [
       {
-        "sender": "AlgoTrader",
-        "name": "MultiSignal",
-        "title": "Complex Trade",
-        "content": "Buy AAPL, sell MSFT, ignore others",
-        "tickers": ["AAPL", "MSFT", "GOOGL", "AMZN"],
-        "timestamp": "2024-01-15T14:20:00Z"
+        "sender": "AnalysisTeam",
+        "name": "Deep Dive",
+        "title": "Renewable Boom",
+        "content": "SolarEdge's recent performance and new product launch are driving optimism. However, there are concerns with FSLR's margins. We recommend increasing SEDG exposure while reducing FSLR.",
+        "tickers": ["SEDG", "FSLR", "RUN"],
+        "timestamp": "2024-02-13T12:00:00Z"
       }
     ],
     "expectedActions": [
       {
-        "ticker": "AAPL",
+        "ticker": "SEDG",
         "action": "buy",
-        "shares": 200,
-        "quantity": 3,
+        "shares": 500,
+        "quantity": 2,
+        "timing": 5000
+      },
+      {
+        "ticker": "FSLR",
+        "action": "sell",
+        "shares": 1000,
+        "quantity": 1,
+        "timing": 5000
+      }
+    ]
+  },
+  {
+    "id": "medium-002",
+    "level": "medium",
+    "messages": [
+      {
+        "sender": "InvestorEdge",
+        "name": "Market Strategy",
+        "title": "Consumer Stocks",
+        "content": "We've been tracking SKX and CROX. Strong consumer demand is favoring SKX, while CROX seems to be losing ground. Consider buying SKX and reducing CROX exposure.",
+        "tickers": ["SKX", "CROX"],
+        "timestamp": "2024-02-13T14:30:00Z"
+      }
+    ],
+    "expectedActions": [
+      {
+        "ticker": "SKX",
+        "action": "buy",
+        "shares": 500,
+        "quantity": 2,
         "timing": 6000
       },
       {
-        "ticker": "MSFT",
+        "ticker": "CROX",
         "action": "sell",
-        "shares": 150,
+        "shares": 1000,
         "quantity": 1,
         "timing": 6000
+      }
+    ]
+  },
+  {
+    "id": "medium-003",
+    "level": "medium",
+    "messages": [
+      {
+        "sender": "QuickPulse",
+        "name": "Trade Idea",
+        "title": "EV Update",
+        "content": "Tesla's performance continues to attract investors. However, Rivian's recent earnings miss and guidance have disappointed. Consider adding TSLA and trimming RIVN.",
+        "tickers": ["TSLA", "RIVN", "LCID"],
+        "timestamp": "2024-02-13T15:45:00Z"
+      }
+    ],
+    "expectedActions": [
+      {
+        "ticker": "TSLA",
+        "action": "buy",
+        "shares": 500,
+        "quantity": 2,
+        "timing": 4000
+      },
+      {
+        "ticker": "RIVN",
+        "action": "sell",
+        "shares": 1000,
+        "quantity": 1,
+        "timing": 4000
       }
     ]
   },
@@ -81,27 +210,57 @@
     "messages": [
       {
         "sender": "HFT_Bot",
-        "name": "RapidFire",
-        "title": "Speed Test",
-        "content": "Execute quickly: Buy 5x TSLA, Sell 3x NVDA",
-        "tickers": ["TSLA", "NVDA", "AMD", "INTC", "QCOM"],
-        "timestamp": "2024-01-15T16:45:00Z"
+        "name": "Speed Test",
+        "title": "Biotech Rapid Moves",
+        "content": "Execute fast: Buy 5x MRNA, Sell 3x BNTX. Ignore others. MRNA is showing breakout momentum, while BNTX faces headwinds from delayed approvals.",
+        "tickers": ["MRNA", "BNTX", "PFE", "REGN"],
+        "timestamp": "2024-02-14T09:00:00Z"
       }
     ],
     "expectedActions": [
       {
-        "ticker": "TSLA",
+        "ticker": "MRNA",
         "action": "buy",
-        "shares": 100,
+        "shares": 500,
         "quantity": 5,
         "timing": 3000
       },
       {
-        "ticker": "NVDA",
+        "ticker": "BNTX",
         "action": "sell",
-        "shares": 75,
+        "shares": 1000,
         "quantity": 3,
         "timing": 3000
+      }
+    ]
+  },
+  {
+    "id": "hard-002",
+    "level": "hard",
+    "messages": [
+      {
+        "sender": "FlashTrade",
+        "name": "Quick Alert",
+        "title": "Energy Sector Rapid Fire",
+        "content": "Quick execution: Buy 5x XOM, Sell 3x CVX. Ignore the noise from other names. Crude prices are surging, boosting XOM’s outlook, while CVX faces regulatory headwinds.",
+        "tickers": ["XOM", "CVX", "BP"],
+        "timestamp": "2024-02-14T11:20:00Z"
+      }
+    ],
+    "expectedActions": [
+      {
+        "ticker": "XOM",
+        "action": "buy",
+        "shares": 500,
+        "quantity": 5,
+        "timing": 2500
+      },
+      {
+        "ticker": "CVX",
+        "action": "sell",
+        "shares": 1000,
+        "quantity": 3,
+        "timing": 2500
       }
     ]
   }

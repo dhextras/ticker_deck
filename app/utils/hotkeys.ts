@@ -57,7 +57,6 @@ export function handleKeyPress(
     case "s":
       newState.sellCount++;
       newState.buyCount = 0;
-      // Clear number buffer when trading
       newState.numberBuffer = "";
       if (newState.numberBufferTimeout) {
         clearTimeout(newState.numberBufferTimeout);
@@ -93,7 +92,6 @@ export function handleKeyPress(
         newState.isChangingShares = false;
         newState.shareChangeBuffer = "";
       } else if (newState.numberBuffer) {
-        // Enter confirms ticker selection
         const tickerNum = parseInt(newState.numberBuffer);
         if (tickerNum >= 1 && tickerNum <= totalTickers) {
           onTickerChange(tickerNum);
@@ -119,16 +117,11 @@ export function handleKeyPress(
         }
 
         // Set new timeout if buffer still has content
-        // FIXME: who the fucks wants that i want it right away and keep it like for 3 secon before remoing instead okay now thats done we also need to show like whats the current buffer in that 3 seconds and make sure the keyboard also works
         if (newState.numberBuffer) {
           newState.numberBufferTimeout = setTimeout(() => {
-            const tickerNum = parseInt(newState.numberBuffer);
-            if (tickerNum >= 1 && tickerNum <= totalTickers) {
-              onTickerChange(tickerNum);
-            }
             newState.numberBuffer = "";
             newState.numberBufferTimeout = undefined;
-          }, 1500);
+          }, 3000);
         }
       } else {
         // Close popup and disable hotkeys temporarily
@@ -145,45 +138,52 @@ export function handleKeyPress(
         if (newState.isChangingShares) {
           newState.shareChangeBuffer += key;
         } else {
-          // Clear any existing timeout
           if (newState.numberBufferTimeout) {
             clearTimeout(newState.numberBufferTimeout);
           }
 
-          // Add digit to buffer
-          newState.numberBuffer += key;
+          const singleDigit = parseInt(key);
+          if (singleDigit >= 1 && singleDigit <= totalTickers) {
+            // Check if we should extend the buffer or select immediately
+            const extendedBuffer = newState.numberBuffer + key;
+            const extendedNum = parseInt(extendedBuffer);
 
-          // Check if current buffer is a valid ticker number
-          const currentNum = parseInt(newState.numberBuffer);
+            if (extendedNum <= totalTickers && newState.numberBuffer !== "") {
+              newState.numberBuffer = extendedBuffer;
+              onTickerChange(extendedNum);
 
-          if (currentNum >= 1 && currentNum <= totalTickers) {
-            // Set timeout to auto-select after 1.5 seconds
-            newState.numberBufferTimeout = setTimeout(() => {
-              const tickerNum = parseInt(newState.numberBuffer);
-              if (tickerNum >= 1 && tickerNum <= totalTickers) {
-                onTickerChange(tickerNum);
-              }
-              newState.numberBuffer = "";
-              newState.numberBufferTimeout = undefined;
-            }, 1500);
-          } else {
-            // If current number is too large, check if we can select with fewer digits
-            const shorterNum = parseInt(newState.numberBuffer.slice(0, -1));
-            if (shorterNum >= 1 && shorterNum <= totalTickers) {
-              onTickerChange(shorterNum);
-              newState.numberBuffer = key; // Start new buffer with current digit
-
-              // Set timeout for the new buffer
+              // Set timeout to clear buffer after 1.5 seconds
               newState.numberBufferTimeout = setTimeout(() => {
-                const tickerNum = parseInt(newState.numberBuffer);
-                if (tickerNum >= 1 && tickerNum <= totalTickers) {
-                  onTickerChange(tickerNum);
-                }
                 newState.numberBuffer = "";
                 newState.numberBufferTimeout = undefined;
               }, 1500);
             } else {
-              // Invalid number, clear buffer
+              if (newState.numberBuffer !== "") {
+                processCascadingSelection(
+                  newState,
+                  key,
+                  totalTickers,
+                  onTickerChange,
+                );
+              } else {
+                newState.numberBuffer = key;
+                onTickerChange(singleDigit);
+
+                newState.numberBufferTimeout = setTimeout(() => {
+                  newState.numberBuffer = "";
+                  newState.numberBufferTimeout = undefined;
+                }, 1500);
+              }
+            }
+          } else {
+            if (newState.numberBuffer !== "") {
+              processCascadingSelection(
+                newState,
+                key,
+                totalTickers,
+                onTickerChange,
+              );
+            } else {
               newState.numberBuffer = "";
             }
           }
@@ -197,4 +197,59 @@ export function handleKeyPress(
   }
 
   return newState;
+}
+
+function processCascadingSelection(
+  state: HotkeyState,
+  newDigit: string,
+  totalTickers: number,
+  onTickerChange: (ticker: number) => void,
+) {
+  const currentBuffer = state.numberBuffer;
+  const fullNumber = currentBuffer + newDigit;
+
+  const fullNum = parseInt(fullNumber);
+  if (fullNum >= 1 && fullNum <= totalTickers) {
+    state.numberBuffer = fullNumber;
+    onTickerChange(fullNum);
+
+    // Set timeout to clear buffer
+    state.numberBufferTimeout = setTimeout(() => {
+      state.numberBuffer = "";
+      state.numberBufferTimeout = undefined;
+    }, 1500);
+    return;
+  }
+
+  // Full number doesn't work, try cascading from left to right
+  for (let i = 1; i <= currentBuffer.length; i++) {
+    const partialOld = currentBuffer.substring(i);
+    const testNumber = partialOld + newDigit;
+    const testNum = parseInt(testNumber);
+
+    if (testNum >= 1 && testNum <= totalTickers) {
+      state.numberBuffer = testNumber;
+      onTickerChange(testNum);
+
+      state.numberBufferTimeout = setTimeout(() => {
+        state.numberBuffer = "";
+        state.numberBufferTimeout = undefined;
+      }, 1500);
+      return;
+    }
+  }
+
+  const singleDigit = parseInt(newDigit);
+  if (singleDigit >= 1 && singleDigit <= totalTickers) {
+    state.numberBuffer = newDigit;
+    onTickerChange(singleDigit);
+
+    // Set timeout to clear buffer
+    state.numberBufferTimeout = setTimeout(() => {
+      state.numberBuffer = "";
+      state.numberBufferTimeout = undefined;
+    }, 1500);
+  } else {
+    state.numberBuffer = "";
+  }
 }

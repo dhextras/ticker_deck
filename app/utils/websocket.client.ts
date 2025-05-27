@@ -7,9 +7,8 @@ export function initSocket(token: string): Socket {
   if (socket) {
     socket.disconnect();
   }
-  console.log(token);
 
-  socket = io("http://localhost:3001", {
+  socket = io(window.ENV?.SOCKET_URL || "http://localhost:3001", {
     auth: {
       token,
     },

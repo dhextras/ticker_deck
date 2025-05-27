@@ -5,10 +5,11 @@
   "type": "module",
   "scripts": {
     "build": "remix vite:build",
-    "dev": "concurrently \"npm run dev:front\" \"npm run dev:server\"",
+    "dev": "concurrently \"npm run dev:front\" \"npm run server\"",
     "dev:front": "node ./server.js",
-    "dev:server": "tsx watch server/index.ts",
-    "start": "cross-env NODE_ENV=production node ./server.js",
+    "server": "tsx watch server/index.ts",
+    "start": "concurrently \"npm run start:front\" \"npm run server\"",
+    "start:front": "cross-env NODE_ENV=production node ./server.js",
     "format": "prettier --write . && prettier --write --plugin=prettier-plugin-organize-imports .",
     "lint": "eslint --ignore-path .gitignore --cache --cache-location ./node_modules/.cache/eslint .",
     "typecheck": "tsc"

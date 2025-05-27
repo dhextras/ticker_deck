@@ -18,7 +18,6 @@ import { existsSync, readFileSync } from "fs";
 
 import TradingPopup from "~/components/TradingPopup";
 import NotificationPopup from "~/components/NotificationPopup";
-import KeyboardHandler from "~/components/KeyboardHandler";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const userId = await requireUserId(request);
@@ -84,7 +83,7 @@ export default function Dashboard() {
     createInitialHotkeyState(),
   );
   const [selectedTicker, setSelectedTicker] = useState(1);
-  const [shareAmount, setShareAmount] = useState(100);
+  const [shareAmount, setShareAmount] = useState(5000);
 
   const allTradingHistory = [...tradingHistory, ...historicalLogs];
 
@@ -195,24 +194,6 @@ export default function Dashboard() {
     setCurrentMessage(null);
   }, []);
 
-  const handleHotkeyBuy = useCallback(
-    (quantity: number) => {
-      if (!currentMessage) return;
-      const ticker = currentMessage.tickers[selectedTicker - 1];
-      handleTrade("buy", ticker, shareAmount);
-    },
-    [currentMessage, selectedTicker, shareAmount, handleTrade],
-  );
-
-  const handleHotkeySell = useCallback(
-    (quantity: number) => {
-      if (!currentMessage) return;
-      const ticker = currentMessage.tickers[selectedTicker - 1];
-      handleTrade("sell", ticker, shareAmount);
-    },
-    [currentMessage, selectedTicker, shareAmount, handleTrade],
-  );
-
   const handleTickerChange = useCallback((ticker: number) => {
     setSelectedTicker(ticker);
   }, []);
@@ -221,30 +202,18 @@ export default function Dashboard() {
     setShareAmount(shares);
   }, []);
 
-  const handleDisableTemporary = useCallback(() => {
-    handleClosePopup();
-  }, [handleClosePopup]);
-
   return (
     <div className="min-h-screen bg-gray-900 text-white">
-      <KeyboardHandler
-        hotkeyState={hotkeyState}
-        totalTickers={currentMessage?.tickers.length || 0}
-        onBuy={handleHotkeyBuy}
-        onSell={handleHotkeySell}
-        onTickerChange={handleTickerChange}
-        onShareChange={handleShareChange}
-        onDisableTemporary={handleDisableTemporary}
-        onStateChange={setHotkeyState}
-      />
-
       <TradingPopup
         message={currentMessage}
         onClose={handleClosePopup}
         onTrade={handleTrade}
+        onTickerChange={handleTickerChange}
+        onShareChange={handleShareChange}
         selectedTicker={selectedTicker}
         shareAmount={shareAmount}
         hotkeyState={hotkeyState}
+        onStateChange={setHotkeyState}
       />
 
       <NotificationPopup
@@ -295,7 +264,7 @@ export default function Dashboard() {
                     key={`${trade.timestamp}-${index}`}
                     className="rounded bg-gray-700 px-3"
                   >
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between py-2">
                       <div className="flex items-center space-x-3">
                         <div
                           className={`rounded px-2 py-1 text-xs font-semibold ${
@@ -314,14 +283,9 @@ export default function Dashboard() {
                         </div>
                       </div>
                       <div className="text-right text-xs text-gray-400">
-                        <div>
-                          {new Date(trade.timestamp).toLocaleTimeString()}
-                        </div>
-                        <div>
-                          {new Date(trade.timestamp).toLocaleDateString()}
-                        </div>
+                        <div>{new Date(trade.timestamp).toLocaleString()}</div>
                         {trade.messageId && (
-                          <div>Msg: {trade.messageId.slice(-8)}</div>
+                          <div>Msg Id: {trade.messageId.slice(-10)}</div>
                         )}
                       </div>
                     </div>

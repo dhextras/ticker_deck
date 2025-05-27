@@ -1,7 +1,7 @@
 import type { LoaderFunctionArgs, ActionFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
-import { useLoaderData, Link, useFetcher } from "@remix-run/react";
-import { useState, useCallback } from "react";
+import { useLoaderData, Form, Link, useFetcher } from "@remix-run/react";
+import { useState, useCallback, useEffect } from "react";
 import { requireUserId } from "~/utils/auth.server";
 import type { TradingMessage, TradingAction } from "~/types";
 import { createInitialHotkeyState, type HotkeyState } from "~/utils/hotkeys";
@@ -10,7 +10,6 @@ import { existsSync, readFileSync, writeFileSync } from "fs";
 
 import TradingPopup from "~/components/TradingPopup";
 import NotificationPopup from "~/components/NotificationPopup";
-import KeyboardHandler from "~/components/KeyboardHandler";
 
 interface PracticeLevel {
   level: "easy" | "medium" | "hard";
@@ -34,7 +33,6 @@ interface TestCase {
   }[];
 }
 
-// Updated interface to store all attempts
 interface LeaderboardEntry {
   userId: string;
   level: "easy" | "medium" | "hard";
@@ -149,7 +147,6 @@ export async function action({ request }: ActionFunctionArgs) {
       const existing = leaderboard[existingEntryIndex];
       existing.attempts.push(newAttempt);
 
-      // Keep only the last 30 attempts to prevent unlimited growth
       if (existing.attempts.length > 30) {
         existing.attempts = existing.attempts.slice(-30);
       }
@@ -192,7 +189,7 @@ export default function Practice() {
   const [selectedTestCount, setSelectedTestCount] = useState(1);
   const [isTestActive, setIsTestActive] = useState(false);
   const [testQueue, setTestQueue] = useState<TestCase[]>([]);
-  const [currentTest, setCurrentTest] = useState<TestCase | null>(null);
+  const [messageQueue, setMessageQueue] = useState<TradingMessage[]>([]);
   const [currentMessage, setCurrentMessage] = useState<TradingMessage | null>(
     null,
   );
@@ -203,7 +200,7 @@ export default function Practice() {
   const [currentTestIndex, setCurrentTestIndex] = useState(0);
   const [finalResults, setFinalResults] = useState<any>(null);
   const [selectedTicker, setSelectedTicker] = useState(1);
-  const [shareAmount, setShareAmount] = useState(100);
+  const [shareAmount, setShareAmount] = useState(5000);
   const [notification, setNotification] = useState<{
     id: string;
     title: string;
@@ -215,6 +212,17 @@ export default function Practice() {
     createInitialHotkeyState(),
   );
 
+  // Add the missing effect for message queue progression
+  useEffect(() => {
+    if (messageQueue.length > 0 && !currentMessage && isTestActive) {
+      const nextMessage = messageQueue[0];
+      setCurrentMessage(nextMessage);
+      setMessageQueue((prev) => prev.slice(1));
+      setMessageStartTime(Date.now());
+      setSelectedTicker(1);
+    }
+  }, [messageQueue, currentMessage, isTestActive]);
+
   const getCurrentLevel = () =>
     practiceLevels.find((level) => level.level === selectedLevel);
   const getAvailableTestCases = () =>
@@ -224,6 +232,7 @@ export default function Practice() {
     const availableTests = getAvailableTestCases();
     if (availableTests.length === 0) return;
 
+    setHotkeyState(createInitialHotkeyState());
     const shuffled = [...availableTests].sort(() => Math.random() - 0.5);
     const selectedTests = shuffled.slice(
       0,
@@ -237,19 +246,20 @@ export default function Practice() {
     setIsTestActive(true);
     setTestStartTime(Date.now());
     setFinalResults(null);
+    setMessageQueue([]);
+    setCurrentMessage(null);
 
     startNextTest(selectedTests[0]);
   }, [selectedLevel, selectedTestCount, testCases]);
 
   const startNextTest = useCallback((testCase: TestCase) => {
-    setCurrentTest(testCase);
     setUserActions([]);
     setSelectedTicker(1);
+    setHotkeyState(createInitialHotkeyState());
 
+    // Queue all messages from this test case
     if (testCase.messages.length > 0) {
-      const firstMessage = testCase.messages[0];
-      setCurrentMessage(firstMessage);
-      setMessageStartTime(Date.now());
+      setMessageQueue(testCase.messages);
     }
   }, []);
 
@@ -285,42 +295,46 @@ export default function Practice() {
   );
 
   const handleClosePopup = useCallback(() => {
-    if (!currentTest || !isTestActive) return;
-
-    const testResults = calculateTestResults(
-      currentTest,
-      userActions,
-      messageStartTime,
-    );
-    setCompletedTests((prev) => [...prev, testResults]);
-
-    const nextTestIndex = currentTestIndex + 1;
-    if (nextTestIndex < testQueue.length) {
-      setCurrentTestIndex(nextTestIndex);
-      startNextTest(testQueue[nextTestIndex]);
-    } else {
-      finishPracticeSession();
-    }
-
     setCurrentMessage(null);
+
+    // If no more messages in queue, finish this test
+    if (messageQueue.length === 0) {
+      const currentTest = testQueue[currentTestIndex];
+      if (currentTest) {
+        const testResults = calculateTestResults(
+          currentTest,
+          userActions,
+          testStartTime,
+        );
+        setCompletedTests((prev) => [...prev, testResults]);
+
+        const nextTestIndex = currentTestIndex + 1;
+        if (nextTestIndex < testQueue.length) {
+          setCurrentTestIndex(nextTestIndex);
+          startNextTest(testQueue[nextTestIndex]);
+        } else {
+          finishPracticeSession();
+        }
+      }
+    }
   }, [
-    currentTest,
-    isTestActive,
-    userActions,
-    messageStartTime,
-    currentTestIndex,
+    messageQueue.length,
     testQueue,
+    currentTestIndex,
+    userActions,
+    testStartTime,
   ]);
 
   const finishPracticeSession = useCallback(() => {
     const totalTime = Date.now() - testStartTime;
     const allResults = [...completedTests];
 
+    const currentTest = testQueue[currentTestIndex];
     if (currentTest && userActions.length > 0) {
       const lastTestResults = calculateTestResults(
         currentTest,
         userActions,
-        messageStartTime,
+        testStartTime,
       );
       allResults.push(lastTestResults);
     }
@@ -346,14 +360,15 @@ export default function Practice() {
     setFinalResults(sessionResults);
     setIsTestActive(false);
     setCurrentMessage(null);
+    setMessageQueue([]);
 
     saveToLeaderboard(sessionResults);
   }, [
     testStartTime,
     completedTests,
-    currentTest,
+    testQueue,
+    currentTestIndex,
     userActions,
-    messageStartTime,
     selectedLevel,
   ]);
 
@@ -459,24 +474,6 @@ export default function Practice() {
     );
   };
 
-  const handleHotkeyBuy = useCallback(
-    (quantity: number) => {
-      if (!currentMessage) return;
-      const ticker = currentMessage.tickers[selectedTicker - 1];
-      handleTrade("buy", ticker, shareAmount);
-    },
-    [currentMessage, selectedTicker, shareAmount, handleTrade],
-  );
-
-  const handleHotkeySell = useCallback(
-    (quantity: number) => {
-      if (!currentMessage) return;
-      const ticker = currentMessage.tickers[selectedTicker - 1];
-      handleTrade("sell", ticker, shareAmount);
-    },
-    [currentMessage, selectedTicker, shareAmount, handleTrade],
-  );
-
   const handleTickerChange = useCallback((ticker: number) => {
     setSelectedTicker(ticker);
   }, []);
@@ -485,33 +482,21 @@ export default function Practice() {
     setShareAmount(shares);
   }, []);
 
-  const handleDisableTemporary = useCallback(() => {
-    handleClosePopup();
-  }, [handleClosePopup]);
-
   const currentLevel = getCurrentLevel();
   const availableTests = getAvailableTestCases();
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
-      <KeyboardHandler
-        hotkeyState={hotkeyState}
-        totalTickers={currentMessage?.tickers.length || 0}
-        onBuy={handleHotkeyBuy}
-        onSell={handleHotkeySell}
-        onTickerChange={handleTickerChange}
-        onShareChange={handleShareChange}
-        onDisableTemporary={handleDisableTemporary}
-        onStateChange={setHotkeyState}
-      />
-
       <TradingPopup
         message={currentMessage}
         onClose={handleClosePopup}
         onTrade={handleTrade}
+        onTickerChange={handleTickerChange}
+        onShareChange={handleShareChange}
         selectedTicker={selectedTicker}
         shareAmount={shareAmount}
         hotkeyState={hotkeyState}
+        onStateChange={setHotkeyState}
       />
 
       <NotificationPopup
@@ -522,22 +507,34 @@ export default function Practice() {
       <header className="flex items-center justify-between bg-gray-800 p-4">
         <h1 className="text-2xl font-bold">Practice Mode</h1>
         <div className="flex items-center space-x-4">
-          {isTestActive && (
-            <div className="flex items-center space-x-2">
-              <div className="rounded-lg bg-blue-600 px-4 py-2">
+          {isTestActive ? (
+            <div className="flex items-center space-x-2 text-green-500">
+              <div>
                 Test: {currentTestIndex + 1}/{testQueue.length}
               </div>
-              <button
-                onClick={finishPracticeSession}
-                className="rounded bg-red-600 px-3 py-1 text-sm hover:bg-red-700"
-              >
-                End Session
-              </button>
+              {messageQueue.length > 0 && (
+                <span className="rounded-full bg-green-600 px-2 py-1 text-xs">
+                  {messageQueue.length} messages queued
+                </span>
+              )}
             </div>
+          ) : finalResults ? (
+            <button
+              onClick={() => setFinalResults(null)}
+              className="text-blue-400 hover:text-blue-300"
+            >
+              Practice Mode
+            </button>
+          ) : (
+            <Link to="/dashboard" className="text-blue-400 hover:text-blue-300">
+              Trading Dashboard
+            </Link>
           )}
-          <Link to="/dashboard" className="text-blue-400 hover:text-blue-300">
-            Back to Dashboard
-          </Link>
+          <Form method="post" action="/logout" className="inline">
+            <button type="submit" className="text-red-400 hover:text-red-300">
+              Logout
+            </button>
+          </Form>
         </div>
       </header>
 
@@ -579,7 +576,6 @@ export default function Practice() {
                 </div>
               </div>
 
-              {/* Configuration - 1/3 width */}
               {currentLevel && (
                 <div className="rounded-lg bg-gray-800 p-4">
                   <h2 className="mb-3 text-lg font-semibold">Configure</h2>
@@ -629,14 +625,12 @@ export default function Practice() {
               )}
             </div>
 
-            {/* Leaderboard */}
             <div className="rounded-lg bg-gray-800 p-4">
               <h2 className="mb-4 text-lg font-semibold">
                 Leaderboard & Your Stats
               </h2>
               <div className="grid gap-4 md:grid-cols-3">
                 {["easy", "medium", "hard"].map((level) => {
-                  // Get all attempts from all users for this level
                   const allAttempts = leaderboard
                     .filter((entry) => entry.level === level)
                     .flatMap((entry) =>
@@ -859,7 +853,7 @@ export default function Practice() {
                 </div>
                 <div className="text-right">
                   <p className="text-sm text-gray-400">
-                    Current Test: {currentTest?.id}
+                    Current Test: {currentTestIndex}
                   </p>
                   <p className="text-sm text-gray-400">
                     Actions: {userActions.length}
@@ -869,7 +863,9 @@ export default function Practice() {
             </div>
 
             <div className="rounded-lg bg-gray-800 p-4">
-              <h3 className="mb-3 text-lg font-semibold">Actions This Test</h3>
+              <h3 className="mb-3 text-lg font-semibold">
+                Actions for the test
+              </h3>
               {userActions.length > 0 ? (
                 <div className="space-y-2">
                   {userActions.map((action, index) => (
