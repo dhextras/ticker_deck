@@ -72,6 +72,7 @@ export default function Dashboard() {
   );
   const [tradingHistory, setTradingHistory] = useState<TradingLog[]>([]);
   const [isConnected, setIsConnected] = useState(false);
+  const [notificationAllowed, setNotificationAllowed] = useState(false);
   const [notification, setNotification] = useState<{
     id: string;
     title: string;
@@ -88,11 +89,32 @@ export default function Dashboard() {
   const allTradingHistory = [...tradingHistory, ...historicalLogs];
 
   useEffect(() => {
+    if (typeof window !== "undefined" && "Notification" in window) {
+      if (Notification.permission === "default") {
+        Notification.requestPermission();
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && "Notification" in window) {
+      if (Notification.permission === "granted") {
+        setNotificationAllowed(true);
+      }
+    }
+  }, [Notification.permission]);
+
+  useEffect(() => {
     if (token) {
       const socket = initSocket(token);
 
       socket.on("connect", () => {
         setIsConnected(true);
+        if (notificationAllowed) {
+          new Notification("WebSocket Connected", {
+            body: "You are now connected to the WebSocket server",
+          });
+        }
       });
 
       socket.on("disconnect", () => {
@@ -122,6 +144,12 @@ export default function Dashboard() {
   useEffect(() => {
     if (messageQueue.length > 0 && !currentMessage) {
       const nextMessage = messageQueue[0];
+      if (notificationAllowed) {
+        new Notification("New Trade alert", {
+          body: `${nextMessage.sender} - ${nextMessage.name}`,
+        });
+      }
+
       setCurrentMessage(nextMessage);
       setMessageQueue((prev) => prev.slice(1));
       setSelectedTicker(1);
