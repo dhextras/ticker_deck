@@ -194,10 +194,36 @@ export default function TradingPopup({
 
   if (!message) return null;
 
+  const highlightKeywords = (text: string) => {
+    const keywords = [
+      "adding",
+      "add",
+      "adds",
+      "added",
+      "long",
+      "buy",
+      "buying",
+    ];
+
+    let highlightedText = text;
+
+    keywords.forEach((keyword) => {
+      const regex = new RegExp(`\\b${keyword}\\b`, "gi");
+      highlightedText = highlightedText.replace(
+        regex,
+        (match) =>
+          `<span class="bg-green-400 text-black px-1 rounded">${match}</span>`,
+      );
+    });
+
+    return highlightedText;
+  };
+
   const formatMessageText = () => {
     const parts = [];
-    if (message.title) parts.push(`Title: ${message.title}`);
-    if (message.content) parts.push(`Content: ${message.content}`);
+    if (message.title) parts.push({ label: "Title", text: message.title });
+    if (message.content)
+      parts.push({ label: "Content", text: message.content });
     return parts;
   };
 
@@ -226,7 +252,12 @@ export default function TradingPopup({
               <div className="mt-4">
                 {formatMessageText().map((part, idx) => (
                   <p key={idx} className="text-lg leading-relaxed text-white">
-                    {part}
+                    <span className="font-bold">{part.label}: </span>
+                    <span
+                      dangerouslySetInnerHTML={{
+                        __html: highlightKeywords(part.text),
+                      }}
+                    />
                   </p>
                 ))}
               </div>
