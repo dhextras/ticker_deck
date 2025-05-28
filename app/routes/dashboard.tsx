@@ -88,28 +88,26 @@ export default function Dashboard() {
 
   const allTradingHistory = [...tradingHistory, ...historicalLogs];
 
-  useEffect(() => {
+  const checkPermission = async () => {
     if (typeof window !== "undefined" && "Notification" in window) {
       if (Notification.permission === "default") {
-        Notification.requestPermission();
+        await Notification.requestPermission();
       }
+      setNotificationAllowed(Notification.permission === "granted");
+    } else {
+      setNotificationAllowed(false);
     }
-  }, []);
+  };
 
   useEffect(() => {
-    if (typeof window !== "undefined" && "Notification" in window) {
-      if (Notification.permission === "granted") {
-        setNotificationAllowed(true);
-      }
-    }
-  }, [Notification.permission]);
+    checkPermission();
 
-  useEffect(() => {
     if (token) {
       const socket = initSocket(token);
 
       socket.on("connect", () => {
         setIsConnected(true);
+        checkPermission();
         if (notificationAllowed) {
           new Notification("WebSocket Connected", {
             body: "You are now connected to the WebSocket server",

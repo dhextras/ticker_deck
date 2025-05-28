@@ -27,6 +27,8 @@ const build = viteDevServer
 
 app.all("*", createRequestHandler({ build }));
 
-server.listen(process.env.FRONTEND_PORT || 3000, () => {
-  console.log("App listening on http://localhost:3000");
+const PORT = process.env.FRONTEND_PORT || 3000;
+
+server.listen(PORT, () => {
+  console.log(`App listening on http://localhost:${PORT}`);
 });
