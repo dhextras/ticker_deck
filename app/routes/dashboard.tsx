@@ -93,11 +93,18 @@ export default function Dashboard() {
       if (Notification.permission === "default") {
         await Notification.requestPermission();
       }
-      setNotificationAllowed(Notification.permission === "granted");
-    } else {
-      setNotificationAllowed(false);
+      const isGranted = Notification.permission === "granted";
+      setNotificationAllowed(isGranted);
     }
   };
+
+  useEffect(() => {
+    if (notificationAllowed && isConnected) {
+      new Notification("WebSocket Connected", {
+        body: "You are now connected to the WebSocket server",
+      });
+    }
+  }, [notificationAllowed, isConnected]);
 
   useEffect(() => {
     checkPermission();
@@ -105,14 +112,9 @@ export default function Dashboard() {
     if (token) {
       const socket = initSocket(token);
 
-      socket.on("connect", () => {
+      socket.on("connect", async () => {
         setIsConnected(true);
         checkPermission();
-        if (notificationAllowed) {
-          new Notification("WebSocket Connected", {
-            body: "You are now connected to the WebSocket server",
-          });
-        }
       });
 
       socket.on("disconnect", () => {
