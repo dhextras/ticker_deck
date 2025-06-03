@@ -3,6 +3,50 @@ import type { TradingAction, TradingMessage } from "../app/types";
 import { verifyToken } from "../app/utils/auth.server";
 import { logTradingAction } from "./logger";
 
+
+const sendTradingDataToBackend = async (action: TradingAction): Promise<void> => {
+  const backendWsUrl = process.env.BACKEND_WEBSOCKET_URL || "http://localhost:8080";
+  
+  if (!backendWsUrl) {
+    throw new Error('BACKEND_WEBSOCKET_URL environment variable is not set');
+  }
+
+  try {
+    const WebSocket = require('ws');
+    const backendWs = new WebSocket(backendWsUrl);
+    
+    const tradingData = {
+      sender: action.sender,
+      name: action.name,
+      type: action.action,
+      timestamp: new Date().toISOString(),
+      ticker: action.ticker,
+      shares: action.shares
+      target: "DECK" // NOTE: Could be anything
+    };
+
+    return new Promise((resolve, reject) => {
+      backendWs.on('open', () => {
+        backendWs.send(JSON.stringify(tradingData));
+        backendWs.close();
+        resolve();
+      });
+
+      backendWs.on('error', (error) => {
+        console.error('Backend WebSocket error:', error);
+        reject(error);
+      });
+
+      backendWs.on('close', () => {
+        resolve();
+      });
+    });
+  } catch (wsError) {
+    console.error('Error sending to backend WebSocket:', wsError);
+    throw wsError;
+  }
+};
+
 export function setupWebSocket(io: SocketIOServer) {
   // Authentication middleware
   io.use((socket, next) => {
@@ -48,6 +92,7 @@ export function setupWebSocket(io: SocketIOServer) {
         // Process multiple orders (quantity support)
         const responses = [];
         for (let i = 0; i < action.quantity; i++) {
+          await sendTradingDataToBackend(action);
           // Log each individual action with message context
           const logResult = await logTradingAction({
             timestamp: new Date().toISOString(),

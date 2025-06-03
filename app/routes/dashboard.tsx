@@ -62,7 +62,6 @@ export async function loader({ request }: LoaderFunctionArgs) {
   const token = getTokenFromCookie(cookieHeader, "ticker_deck_session");
   return json({ userId, token, historicalLogs });
 }
-
 export default function Dashboard() {
   const { userId, token, historicalLogs } = useLoaderData<typeof loader>();
 
@@ -210,7 +209,8 @@ export default function Dashboard() {
         shares,
         quantity: 1,
         timestamp: new Date().toISOString(),
-        messageId: currentMessage.id,
+        messageId: currentMessage.id, sender: currentMessage.sender,
+        name: currentMessage.name,
       };
 
       sendTradingAction(tradingAction);

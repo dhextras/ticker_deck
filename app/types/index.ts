@@ -43,6 +43,8 @@ export interface TradingAction {
   timestamp: string;
   messageId?: string;
   timingMs?: number;
+  sender?: string;
+  name?: string;
 }
 
 export interface NotificationData {
