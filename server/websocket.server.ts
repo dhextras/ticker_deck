@@ -1,3 +1,4 @@
+import WebSocket from "ws";
 import { Server as SocketIOServer } from "socket.io";
 import type { TradingAction, TradingMessage } from "../app/types";
 import { verifyToken } from "../app/utils/auth.server";
@@ -12,7 +13,6 @@ const sendTradingDataToBackend = async (action: TradingAction): Promise<void> =>
   }
 
   try {
-    const WebSocket = require('ws');
     const backendWs = new WebSocket(backendWsUrl);
     
     const tradingData = {
