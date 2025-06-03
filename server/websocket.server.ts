@@ -18,7 +18,7 @@ const sendTradingDataToBackend = async (action: TradingAction): Promise<void> =>
     const tradingData = {
       sender: action.sender,
       name: action.name,
-      type: action.action,
+      type: action.action.charAt(0).toUpperCase() + action.action.slice(1).toLowerCase(),
       timestamp: new Date().toISOString(),
       ticker: action.ticker,
       shares: action.shares,

@@ -209,7 +209,8 @@ export default function Dashboard() {
         shares,
         quantity: 1,
         timestamp: new Date().toISOString(),
-        messageId: currentMessage.id, sender: currentMessage.sender,
+        messageId: currentMessage.id, 
+        sender: currentMessage.sender,
         name: currentMessage.name,
       };
 
