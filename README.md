@@ -1,8 +1,6 @@
 # Ticker Deck
 
-
 Instant trade decisions. Analyze, choose, execute.
-
 
 ## 🚀 Getting Started
 
@@ -53,4 +51,3 @@ npm run typecheck
 ---
 
 Built with [Remix](https://remix.run/).
-

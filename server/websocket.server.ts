@@ -1,48 +1,52 @@
-import WebSocket from "ws";
 import { Server as SocketIOServer } from "socket.io";
+import WebSocket from "ws";
 import type { TradingAction, TradingMessage } from "../app/types";
 import { verifyToken } from "../app/utils/auth.server";
 import { logTradingAction } from "./logger";
 
+const sendTradingDataToBackend = async (
+  action: TradingAction,
+): Promise<void> => {
+  const backendWsUrl =
+    process.env.BACKEND_WEBSOCKET_URL || "http://localhost:8080";
 
-const sendTradingDataToBackend = async (action: TradingAction): Promise<void> => {
-  const backendWsUrl = process.env.BACKEND_WEBSOCKET_URL || "http://localhost:8080";
-  
   if (!backendWsUrl) {
-    throw new Error('BACKEND_WEBSOCKET_URL environment variable is not set');
+    throw new Error("BACKEND_WEBSOCKET_URL environment variable is not set");
   }
 
   try {
     const backendWs = new WebSocket(backendWsUrl);
-    
+
     const tradingData = {
       sender: action.sender,
       name: action.name,
-      type: action.action.charAt(0).toUpperCase() + action.action.slice(1).toLowerCase(),
+      type:
+        action.action.charAt(0).toUpperCase() +
+        action.action.slice(1).toLowerCase(),
       timestamp: new Date().toISOString(),
       ticker: action.ticker,
       shares: action.shares,
-      target: "DECK" // NOTE: Could be anything
+      target: "DECK", // NOTE: Could be anything
     };
 
     return new Promise((resolve, reject) => {
-      backendWs.on('open', () => {
+      backendWs.on("open", () => {
         backendWs.send(JSON.stringify(tradingData));
         backendWs.close();
         resolve();
       });
 
-      backendWs.on('error', (error) => {
-        console.error('Backend WebSocket error:', error);
+      backendWs.on("error", (error) => {
+        console.error("Backend WebSocket error:", error);
         reject(error);
       });
 
-      backendWs.on('close', () => {
+      backendWs.on("close", () => {
         resolve();
       });
     });
   } catch (wsError) {
-    console.error('Error sending to backend WebSocket:', wsError);
+    console.error("Error sending to backend WebSocket:", wsError);
     throw wsError;
   }
 };

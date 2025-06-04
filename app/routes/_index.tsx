@@ -1,7 +1,7 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
-import { useEffect } from "react";
 import { json, redirect } from "@remix-run/node";
 import { Form, useActionData } from "@remix-run/react";
+import { useEffect } from "react";
 import { createUserSession, getUserId, verifyLogin } from "~/utils/auth.server";
 
 export async function loader({ request }: LoaderFunctionArgs) {

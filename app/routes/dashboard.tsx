@@ -8,6 +8,10 @@ import type { TradingAction, TradingLog, TradingMessage } from "~/types";
 import { requireUserId } from "~/utils/auth.server";
 import { createInitialHotkeyState, type HotkeyState } from "~/utils/hotkeys";
 import {
+  getStoredShareAmount,
+  setStoredShareAmount,
+} from "~/utils/localStorage";
+import {
   initSocket,
   offMessage,
   offTradingResponse,
@@ -15,7 +19,6 @@ import {
   onTradingResponse,
   sendTradingAction,
 } from "~/utils/websocket.client";
-import { getStoredShareAmount, setStoredShareAmount } from "~/utils/localStorage";
 
 import NotificationPopup from "~/components/NotificationPopup";
 import TradingPopup from "~/components/TradingPopup";
@@ -127,10 +130,10 @@ export default function Dashboard() {
     }
   }, [token]);
 
-useEffect(() => {
-  const storedAmount = getStoredShareAmount();
-  setShareAmount(storedAmount);
-}, []);
+  useEffect(() => {
+    const storedAmount = getStoredShareAmount();
+    setShareAmount(storedAmount);
+  }, []);
 
   const handleMessage = useCallback((message: TradingMessage) => {
     console.log("Received message:", message);
@@ -215,7 +218,7 @@ useEffect(() => {
         shares,
         quantity: 1,
         timestamp: new Date().toISOString(),
-        messageId: currentMessage.id, 
+        messageId: currentMessage.id,
         sender: currentMessage.sender,
         name: currentMessage.name,
       };
