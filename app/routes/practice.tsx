@@ -200,7 +200,7 @@ export default function Practice() {
   const [currentTestIndex, setCurrentTestIndex] = useState(0);
   const [finalResults, setFinalResults] = useState<any>(null);
   const [selectedTicker, setSelectedTicker] = useState(1);
-  const [shareAmount, setShareAmount] = useState(5000);
+  const [shareAmount, setShareAmount] = useState(4900);
   const [notification, setNotification] = useState<{
     id: string;
     title: string;

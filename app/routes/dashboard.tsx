@@ -15,6 +15,7 @@ import {
   onTradingResponse,
   sendTradingAction,
 } from "~/utils/websocket.client";
+import { getStoredShareAmount, setStoredShareAmount } from "~/utils/localStorage";
 
 import NotificationPopup from "~/components/NotificationPopup";
 import TradingPopup from "~/components/TradingPopup";
@@ -83,7 +84,7 @@ export default function Dashboard() {
     createInitialHotkeyState(),
   );
   const [selectedTicker, setSelectedTicker] = useState(1);
-  const [shareAmount, setShareAmount] = useState(5000);
+  const [shareAmount, setShareAmount] = useState(4900);
 
   const allTradingHistory = [...tradingHistory, ...historicalLogs];
 
@@ -125,6 +126,11 @@ export default function Dashboard() {
       };
     }
   }, [token]);
+
+useEffect(() => {
+  const storedAmount = getStoredShareAmount();
+  setShareAmount(storedAmount);
+}, []);
 
   const handleMessage = useCallback((message: TradingMessage) => {
     console.log("Received message:", message);
@@ -229,6 +235,7 @@ export default function Dashboard() {
 
   const handleShareChange = useCallback((shares: number) => {
     setShareAmount(shares);
+    setStoredShareAmount(shares);
   }, []);
 
   return (
